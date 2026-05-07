@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<ui:composition template="/WEB-INF/templates/layout.xhtml">
+    <ui:param name="title" value="My Profile - Wishaw YMCA Esports"/>
+    <ui:define name="content">
+        <div class="page-container">
+            <!-- Basic profile shown for ALL authenticated users -->
+            <div class="profile-header">
+                <div class="profile-avatar" aria-label="User avatar">
+                    <span aria-hidden="true">&#128100;</span>
+                </div>
+                <div class="profile-info">
+                    <h:panelGroup rendered="#{playerProfileBean.currentUser != null}">
+                        <h1>#{playerProfileBean.currentUser.firstName} #{playerProfileBean.currentUser.lastName}</h1>
+                        <p class="profile-team">&#9993; #{playerProfileBean.currentUser.username}</p>
+                    </h:panelGroup>
+                    <h:panelGroup rendered="#{playerProfileBean.currentUser == null}">
+                        <h1>#{request.userPrincipal.name}</h1>
+                    </h:panelGroup>
+                    <h:panelGroup rendered="#{playerProfileBean.currentPlayer != null}">
+                        <p class="profile-team">
+                            &#129309; #{playerProfileBean.currentPlayer.team != null ?
+                                playerProfileBean.currentPlayer.team.teamName : 'No Team'}
+                        </p>
+                        <p class="profile-module">
+                            &#128218; Current Module:
+                            <strong>#{playerProfileBean.currentPlayer.currentModule != null ?
+                                playerProfileBean.currentPlayer.currentModule.name : 'None'}</strong>
+                        </p>
+                        <div class="total-xp-display" aria-label="Total XP">
+                            <span class="xp-value">&#11088; #{playerProfileBean.currentPlayer.totalXp}</span>
+                            <span class="xp-label">Total XP</span>
+                        </div>
+                    </h:panelGroup>
+                </div>
+            </div>
+
+            <!-- Player-specific content: only shown when a Player record exists -->
+            <h:panelGroup rendered="#{playerProfileBean.currentPlayer == null}" layout="block">
+                <div class="alert alert-info" role="status">
+                    <p>You are not currently enrolled as a player. Contact your centre admin to be added to a team.</p>
+                </div>
+            </h:panelGroup>
+
+            <h:panelGroup rendered="#{playerProfileBean.currentPlayer != null}" layout="block">
+
+                <!-- Badge Progress Section -->
+                <section class="section" aria-labelledby="badgeProgressTitle">
+                    <h2 id="badgeProgressTitle">Badge Progress</h2>
+                    <div class="badge-grid" role="list">
+                        <ui:repeat value="#{playerProfileBean.availableBadges}" var="badge">
+                            <div class="badge-card" role="listitem">
+                                <div class="badge-icon" aria-hidden="true">&#127941;</div>
+                                <h3 class="badge-name">#{badge.name}</h3>
+                                <div class="badge-xp">
+                                    <span class="xp-value">#{playerProfileBean.getBadgeXpForBadge(badge)} XP</span>
+                                </div>
+                                <div class="badge-level">
+                                    <span class="level-pill level-#{playerProfileBean.getLevelForBadge(badge).toLowerCase()}">
+                                        #{playerProfileBean.getLevelForBadge(badge)}
+                                    </span>
+                                </div>
+                                <div class="badge-challenges" aria-label="Challenges for #{badge.name}">
+                                    <p class="challenges-title">Challenges:</p>
+                                    <ul class="challenge-list">
+                                        <ui:repeat value="#{badge.subBadges}" var="sb">
+                                            <li class="challenge-item #{playerProfileBean.isChallengeCompleted(sb) ? 'completed' : ''}">
+                                                <span aria-hidden="true">#{playerProfileBean.isChallengeCompleted(sb) ? '✅' : '⬜'}</span>
+                                                #{sb.name}
+                                                <span class="challenge-xp">(&#11088; #{sb.point} XP)</span>
+                                            </li>
+                                        </ui:repeat>
+                                    </ul>
+                                </div>
+                            </div>
+                        </ui:repeat>
+                    </div>
+                </section>
+
+                <!-- Submit Evidence Section -->
+                <section class="section" aria-labelledby="submitEvidenceTitle">
+                    <h2 id="submitEvidenceTitle">Submit Evidence</h2>
+                    <p>Complete a challenge by submitting evidence for coach review.</p>
+                    <h:form id="evidenceForm" enctype="multipart/form-data">
+                        <p:messages showDetail="true" closable="true"/>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="evidenceBadge">Badge <span aria-hidden="true">*</span></label>
+                                <p:selectOneMenu id="evidenceBadge"
+                                                 value="#{playerProfileBean.selectedBadge}"
+                                                 required="true" styleClass="form-control"
+                                                 converter="#{entityConverter}"
+                                                 aria-required="true">
+                                    <f:selectItem itemLabel="Select Badge" itemValue=""/>
+                                    <f:selectItems value="#{playerProfileBean.availableBadges}" var="b"
+                                                   itemLabel="#{b.name}" itemValue="#{b}"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="form-group">
+                                <label for="evidenceChallenge">Challenge <span aria-hidden="true">*</span></label>
+                                <p:selectOneMenu id="evidenceChallenge"
+                                                 value="#{playerProfileBean.selectedSubBadge}"
+                                                 required="true" styleClass="form-control"
+                                                 converter="#{entityConverter}"
+                                                 aria-required="true">
+                                    <f:selectItem itemLabel="Select Challenge" itemValue=""/>
+                                    <h:panelGroup rendered="#{playerProfileBean.selectedBadge != null}">
+                                        <f:selectItems value="#{playerProfileBean.selectedBadge.subBadges}"
+                                                       var="sb" itemLabel="#{sb.name} (#{sb.point} XP)"
+                                                       itemValue="#{sb}"/>
+                                    </h:panelGroup>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="form-group">
+                                <label for="evidenceLink">Evidence Link (URL)</label>
+                                <p:inputText id="evidenceLink"
+                                             value="#{playerProfileBean.evidenceUrl}"
+                                             placeholder="https://..."
+                                             styleClass="form-control"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="evidenceFile">Upload Evidence (Screenshot)</label>
+                                <p:fileUpload id="evidenceFile"
+                                              fileLimit="1"
+                                              maxFileSize="10000000"
+                                              accept="image/*"
+                                              mode="simple"
+                                              auto="false"
+                                              styleClass="form-control"
+                                              aria-label="Upload evidence screenshot"/>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <p:commandButton value="Submit Evidence"
+                                             action="#{playerProfileBean.submitEvidence()}"
+                                             ajax="true" update="evidenceForm"
+                                             styleClass="btn btn-primary"
+                                             icon="pi pi-upload"
+                                             aria-label="Submit evidence for review"/>
+                        </div>
+                    </h:form>
+                </section>
+
+                <!-- Current Module Sessions -->
+                <h:panelGroup rendered="#{playerProfileBean.currentPlayer.currentModule != null}"
+                              layout="block">
+                    <section class="section" aria-labelledby="moduleTitle">
+                        <h2 id="moduleTitle">
+                            Current Module: #{playerProfileBean.currentPlayer.currentModule.name}
+                        </h2>
+                        <p class="game-tag">
+                            &#127918; #{playerProfileBean.currentPlayer.currentModule.gameType}
+                        </p>
+                        <p:dataTable value="#{playerProfileBean.currentPlayer.currentModule.moduleDetails}"
+                                     var="md" styleClass="data-table"
+                                     emptyMessage="No sessions planned yet."
+                                     aria-label="Module sessions">
+                            <p:column headerText="Week" style="width:60px">
+                                <h:outputText value="Week #{md.weekNo}"/>
+                            </p:column>
+                            <p:column headerText="Session">
+                                <h:outputText value="#{md.name}"/>
+                            </p:column>
+                            <p:column headerText="Focus">
+                                <h:outputText value="#{md.sessionFocusDescription}"/>
+                            </p:column>
+                            <p:column headerText="Challenge">
+                                <h:panelGroup rendered="#{md.subBadge != null}">
+                                    <span class="#{playerProfileBean.isChallengeCompleted(md.subBadge) ? 'completed-challenge' : 'pending-challenge'}">
+                                        #{md.subBadge.name}
+                                        <span class="challenge-xp">(&#11088;#{md.subBadge.point})</span>
+                                    </span>
+                                </h:panelGroup>
+                            </p:column>
+                        </p:dataTable>
+                    </section>
+                </h:panelGroup>
+            </h:panelGroup>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<ui:composition template="/WEB-INF/templates/layout.xhtml">
+    <ui:param name="title" value="Players - Coach"/>
+    <ui:define name="content">
+        <div class="page-container">
+            <div class="page-header">
+                <h1>&#128101; Player List</h1>
+                <p class="subtitle">View players and award sub-badges</p>
+            </div>
+
+            <h:form id="coachPlayersForm">
+                <p:messages showDetail="true" closable="true"/>
+
+                <p:dataTable value="#{playerBean.players}" var="pl"
+                             paginator="true" rows="15"
+                             paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                             rowsPerPageTemplate="10,15,25"
+                             styleClass="data-table"
+                             emptyMessage="No players found."
+                             reflow="true"
+                             aria-label="Players table">
+                    <p:column headerText="Name" sortBy="#{pl.user.firstName}">
+                        <h:outputText value="#{pl.user.firstName} #{pl.user.lastName}"/>
+                    </p:column>
+                    <p:column headerText="Team" sortBy="#{pl.team.teamName}">
+                        <h:outputText value="#{pl.team != null ? pl.team.teamName : 'No Team'}"/>
+                    </p:column>
+                    <p:column headerText="Age Group" sortBy="#{pl.ageGroup.name}">
+                        <h:outputText value="#{pl.ageGroup != null ? pl.ageGroup.name : '-'}"/>
+                    </p:column>
+                    <p:column headerText="Current Module">
+                        <h:outputText value="#{pl.currentModule != null ? pl.currentModule.name : 'None'}"/>
+                    </p:column>
+                    <p:column headerText="Total XP" sortBy="#{pl.totalXp}">
+                        <span class="xp-badge">&#11088; #{pl.totalXp} XP</span>
+                    </p:column>
+                    <p:column headerText="Actions" styleClass="actions-col">
+                        <p:commandButton icon="pi pi-eye" title="View Player"
+                                         action="#{playerBean.selectPlayer(pl)}"
+                                         update="viewPlayerForm" ajax="true"
+                                         oncomplete="if(PF('viewPlayerDlg')) PF('viewPlayerDlg').show()"
+                                         styleClass="btn btn-sm btn-info"
+                                         aria-label="View #{pl.user.firstName}"/>
+                        <p:commandButton icon="pi pi-star" title="Award Sub-Badge"
+                                         action="#{playerBean.selectPlayer(pl)}"
+                                         update="awardForm" ajax="true"
+                                         oncomplete="if(PF('awardDlg')) PF('awardDlg').show()"
+                                         styleClass="btn btn-sm btn-success"
+                                         aria-label="Award sub-badge to #{pl.user.firstName}"/>
+                    </p:column>
+                </p:dataTable>
+            </h:form>
+
+            <!-- View Player Dialog -->
+            <p:dialog header="Player Profile" widgetVar="viewPlayerDlg" modal="true"
+                      closable="true" resizable="false" responsive="true" width="700"
+                      styleClass="dialog-form view-player-dialog"
+                      style="max-height: 80vh; overflow-y: auto;">
+                <h:form id="viewPlayerForm">
+                    <h:panelGroup rendered="#{playerBean.selectedPlayer != null}" layout="block">
+                        <div class="player-profile-dialog">
+                            <div class="profile-info">
+                                <div class="profile-dialog-header">
+                                    <div class="profile-avatar">&#127918;</div>
+                                    <div class="profile-dialog-name">
+                                        <h2>#{playerBean.selectedPlayer.user.firstName} #{playerBean.selectedPlayer.user.lastName}</h2>
+                                        <span class="badge #{playerBean.selectedPlayer.user.enabled ? 'badge-success' : 'badge-danger'}">
+                                            #{playerBean.selectedPlayer.user.enabled ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </div>
+                                    <div class="total-xp-display">
+                                        <span class="xp-value">#{playerBean.selectedPlayer.totalXp}</span>
+                                        <span class="xp-label">XP</span>
+                                    </div>
+                                </div>
+                                <div class="profile-detail-grid">
+                                    <div class="profile-detail-card">
+                                        <span class="profile-detail-icon">&#127960;</span>
+                                        <span class="profile-detail-label">Centre</span>
+                                        <span class="profile-detail-value">#{playerBean.selectedPlayer.centre != null ? playerBean.selectedPlayer.centre.name : 'None'}</span>
+                                    </div>
+                                    <div class="profile-detail-card">
+                                        <span class="profile-detail-icon">&#128101;</span>
+                                        <span class="profile-detail-label">Team</span>
+                                        <span class="profile-detail-value">#{playerBean.selectedPlayer.team != null ? playerBean.selectedPlayer.team.teamName : 'No Team'}</span>
+                                    </div>
+                                    <div class="profile-detail-card">
+                                        <span class="profile-detail-icon">&#128218;</span>
+                                        <span class="profile-detail-label">Module</span>
+                                        <span class="profile-detail-value">#{playerBean.selectedPlayer.currentModule != null ? playerBean.selectedPlayer.currentModule.name : 'None'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3>Badge Progress</h3>
+                            <p:dataTable value="#{playerBean.selectedPlayerLevels}" var="lv"
+                                         emptyMessage="No badge data yet." styleClass="data-table-sm"
+                                         reflow="true">
+                                <p:column headerText="Badge">
+                                    <h:outputText value="#{lv.badge.name}"/>
+                                </p:column>
+                                <p:column headerText="XP">
+                                    <h:outputText value="#{lv.badgeXp}"/>
+                                </p:column>
+                                <p:column headerText="Level">
+                                    <span class="level-badge">#{lv.level.name}</span>
+                                </p:column>
+                            </p:dataTable>
+
+                            <h3>Pending Approvals</h3>
+                            <p:dataTable value="#{playerBean.pendingApprovals}" var="pd"
+                                         emptyMessage="No pending approvals." styleClass="data-table-sm"
+                                         reflow="true">
+                                <p:column headerText="Challenge">
+                                    <h:outputText value="#{pd.subBadge.name}"/>
+                                </p:column>
+                                <p:column headerText="Badge">
+                                    <h:outputText value="#{pd.badge.name}"/>
+                                </p:column>
+                                <p:column headerText="Actions" styleClass="actions-col">
+                                    <p:inputText value="#{playerBean.coachNotes}" placeholder="Notes..."
+                                                 styleClass="form-control-sm"/>
+                                    <p:commandButton value="Approve" icon="pi pi-check"
+                                                     action="#{playerBean.approveChallenge(pd)}"
+                                                     update="viewPlayerForm coachPlayersForm" ajax="true"
+                                                     styleClass="btn btn-sm btn-success"
+                                                     aria-label="Approve #{pd.subBadge.name}"/>
+                                    <p:commandButton value="Reject" icon="pi pi-times"
+                                                     action="#{playerBean.rejectChallenge(pd)}"
+                                                     update="viewPlayerForm coachPlayersForm" ajax="true"
+                                                     styleClass="btn btn-sm btn-danger"
+                                                     aria-label="Reject #{pd.subBadge.name}"/>
+                                </p:column>
+                            </p:dataTable>
+
+                            <h3>Completed Challenges</h3>
+                            <p:dataTable value="#{playerBean.selectedPlayerBadges}" var="pb"
+                                         styleClass="data-table-sm" emptyMessage="No completed challenges."
+                                         reflow="true">
+                                <p:column headerText="Challenge">
+                                    <h:outputText value="#{pb.subBadge.name}"/>
+                                </p:column>
+                                <p:column headerText="Badge">
+                                    <h:outputText value="#{pb.badge.name}"/>
+                                </p:column>
+                                <p:column headerText="XP">
+                                    <span class="xp-badge">&#11088; #{pb.subBadge.point}</span>
+                                </p:column>
+                                <p:column headerText="Date Earned">
+                                    <h:outputText value="#{pb.earnedDate}"/>
+                                </p:column>
+                                <p:column headerText="Status">
+                                    <span class="badge badge-success">Approved</span>
+                                </p:column>
+                            </p:dataTable>
+                        </div>
+                    </h:panelGroup>
+                </h:form>
+            </p:dialog>
+
+            <!-- Award Sub-Badge Dialog -->
+            <p:dialog header="Award Sub-Badge" widgetVar="awardDlg" modal="true"
+                      closable="true" resizable="false" responsive="true" width="500"
+                      styleClass="dialog-form award-dialog"
+                      aria-label="Award Sub-Badge Dialog"
+                      style="max-height: 80vh; overflow-y: auto;">
+                <h:form id="awardForm">
+                    <p:messages showDetail="true" closable="true"/>
+                    <h:panelGroup rendered="#{playerBean.selectedPlayer != null}" layout="block">
+                        <div class="player-info-bar">
+                            <span>&#128100; <strong>#{playerBean.selectedPlayer.user.firstName}
+                                #{playerBean.selectedPlayer.user.lastName}</strong></span>
+                            <span class="xp-badge">&#11088; #{playerBean.selectedPlayer.totalXp} XP</span>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="awardBadge">Badge <span aria-hidden="true">*</span></label>
+                                <p:selectOneMenu id="awardBadge" value="#{playerBean.selectedBadge}"
+                                                 required="true" styleClass="form-control"
+                                                 converter="#{entityConverter}">
+                                    <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.Badge"/>
+                                    <f:selectItem itemLabel="-- Select Badge --" itemValue="#{null}" noSelectionOption="true"/>
+                                    <f:selectItems value="#{playerBean.badges}" var="b"
+                                                   itemLabel="#{b.name}" itemValue="#{b}"/>
+                                    <p:ajax update="awardSubBadge"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="form-group">
+                                <label for="awardSubBadge">Sub-Badge <span aria-hidden="true">*</span></label>
+                                <p:selectOneMenu id="awardSubBadge" value="#{playerBean.selectedSubBadge}"
+                                                 required="true" styleClass="form-control"
+                                                 converter="#{entityConverter}"
+                                                 disabled="#{playerBean.selectedBadge == null}">
+                                    <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.SubBadge"/>
+                                    <f:selectItem itemLabel="-- Select Sub-Badge --" itemValue="#{null}" noSelectionOption="true"/>
+                                    <f:selectItems value="#{playerBean.selectedBadge != null ? playerBean.selectedBadge.subBadges : null}" var="sb"
+                                                   itemLabel="#{sb.name} (#{sb.point} XP)" itemValue="#{sb}"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="form-group">
+                                <label for="awardNotes">Coach Notes</label>
+                                <p:inputTextarea id="awardNotes" value="#{playerBean.coachNotes}"
+                                                 placeholder="Optional notes..."
+                                                 styleClass="form-control" rows="3"/>
+                            </div>
+                        </div>
+                        <div class="dialog-actions">
+                            <p:commandButton value="Award Sub-Badge" action="#{playerBean.awardSubBadge()}"
+                                             ajax="true" update="@form coachPlayersForm"
+                                             styleClass="btn btn-primary" icon="pi pi-check"
+                                             oncomplete="if(!args.validationFailed &amp;&amp; PF('awardDlg')) PF('awardDlg').hide()"/>
+                            <p:commandButton value="Cancel" onclick="if(PF('awardDlg')) PF('awardDlg').hide()"
+                                             type="button" styleClass="btn btn-secondary"/>
+                        </div>
+                    </h:panelGroup>
+                </h:form>
+            </p:dialog>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade">
+                <p:commandButton value="Confirm" type="button" styleClass="btn btn-danger ui-confirmdialog-yes" icon="pi pi-check"/>
+                <p:commandButton value="Cancel" type="button" styleClass="btn btn-secondary ui-confirmdialog-no" icon="pi pi-times"/>
+            </p:confirmDialog>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

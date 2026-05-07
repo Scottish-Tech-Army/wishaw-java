@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<h:head>
+    <title>#{title != null ? title : 'Wishaw YMCA Esports'}</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="theme-color" content="#1C1C2E"/>
+    <link rel="manifest" href="#{request.contextPath}/manifest.json"/>
+    <link rel="icon" type="image/x-icon" href="#{request.contextPath}/resources/images/favicon.ico"/>
+    <link rel="stylesheet" href="#{request.contextPath}/resources/css/app.css" type="text/css"/>
+</h:head>
+<h:body>
+    <div class="app-wrapper">
+        <!-- Navigation -->
+        <ui:include src="/WEB-INF/templates/navbar.xhtml"/>
+
+        <!-- Main Content -->
+        <main class="main-content" role="main" aria-label="Main Content">
+            <ui:insert name="content">
+                <!-- page content goes here -->
+            </ui:insert>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer" role="contentinfo">
+            <div class="container">
+                <p>&#169; 2026 Wishaw YMCA Esports Academy | Powered by Scottish Tech Army</p>
+            </div>
+        </footer>
+    </div>
+</h:body>
+</html>

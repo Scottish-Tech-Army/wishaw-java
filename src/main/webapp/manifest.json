@@ -1,0 +1,10 @@
+{
+  "name": "Wishaw YMCA Esports",
+  "short_name": "WYE Badges",
+  "description": "Wishaw YMCA Esports Digital Badging Portal",
+  "start_url": "/dashboard.xhtml",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": []
+}

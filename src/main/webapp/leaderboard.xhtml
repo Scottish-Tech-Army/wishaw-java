@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<ui:composition template="/WEB-INF/templates/layout.xhtml">
+    <ui:param name="title" value="Leaderboard - Wishaw YMCA Esports"/>
+    <ui:define name="content">
+        <div class="page-container">
+            <div class="page-header">
+                <h1>&#127942; Leaderboard</h1>
+                <p class="subtitle">Top players ranked by total XP</p>
+            </div>
+
+            <div class="leaderboard-filter">
+                <h:form id="filterForm">
+                    <label for="centreFilter">Filter by Centre:</label>
+                    <p:selectOneMenu id="centreFilter" value="#{leaderboardBean.selectedCentreId}"
+                                     styleClass="form-control centre-select"
+                                     onchange="this.form.submit()"
+                                     aria-label="Filter leaderboard by centre">
+                        <f:selectItems value="#{leaderboardBean.centres}" var="c"
+                                       itemLabel="#{c.name}" itemValue="#{c.id}"/>
+                    </p:selectOneMenu>
+                    <p:commandButton value="Filter" action="#{leaderboardBean.loadLeaderboard()}"
+                                     ajax="true" update="leaderboardPanel"
+                                     styleClass="btn btn-primary" icon="pi pi-search"/>
+                </h:form>
+            </div>
+
+            <p:outputPanel id="leaderboardPanel">
+                <p:dataTable value="#{leaderboardBean.leaderboard}" var="pl"
+                             reflow="true"
+                             styleClass="data-table leaderboard-table"
+                             emptyMessage="No players found."
+                             aria-label="Leaderboard table">
+                    <p:column headerText="Rank" style="width:60px; text-align:center;">
+                        <h:outputText value="#{leaderboardBean.leaderboard.indexOf(pl) + 1}"
+                                      styleClass="rank-badge rank-#{leaderboardBean.leaderboard.indexOf(pl) + 1}"/>
+                    </p:column>
+                    <p:column headerText="Player" sortBy="#{pl.user.firstName}">
+                        <div class="player-name">
+                            <span class="player-avatar" aria-hidden="true">&#128100;</span>
+                            <span>#{pl.user.firstName} #{pl.user.lastName}</span>
+                        </div>
+                    </p:column>
+                    <p:column headerText="Team">
+                        <h:outputText value="#{pl.team != null ? pl.team.teamName : '-'}"/>
+                    </p:column>
+                    <p:column headerText="Total XP" sortBy="#{pl.totalXp}">
+                        <span class="xp-badge">&#11088; #{pl.totalXp} XP</span>
+                    </p:column>
+                    <p:column headerText="Module">
+                        <h:outputText value="#{pl.currentModule != null ? pl.currentModule.name : '-'}"/>
+                    </p:column>
+                </p:dataTable>
+            </p:outputPanel>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

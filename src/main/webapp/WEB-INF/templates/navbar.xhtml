@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+<h:body>
+    <!-- Hidden form used solely for logout POST -->
+    <h:form id="logoutForm" style="display:none">
+        <p:commandButton id="logoutBtn" action="#{logoutBean.logout}" ajax="false"/>
+    </h:form>
+
+    <nav class="navbar" role="navigation" aria-label="Main Navigation">
+        <div class="navbar-brand">
+            <a href="#{request.contextPath}/dashboard.xhtml" aria-label="Home - Wishaw YMCA Esports">
+                <span class="brand-icon" aria-hidden="true">&#127918;</span>
+                <span class="brand-name">Wishaw YMCA Esports</span>
+            </a>
+        </div>
+
+        <h:form id="navForm" styleClass="navbar-form">
+            <p:commandButton id="menuBtn"
+                             icon="pi pi-bars"
+                             styleClass="hamburger-btn"
+                             type="button"
+                             aria-label="Toggle navigation"/>
+
+            <p:menu overlay="true" trigger="navForm:menuBtn" my="right top" at="right bottom">
+                <p:menuitem value="Dashboard"
+                            url="#{request.contextPath}/dashboard.xhtml"
+                            icon="pi pi-home"/>
+                <p:menuitem value="Leaderboard"
+                            url="#{request.contextPath}/leaderboard.xhtml"
+                            icon="pi pi-list"/>
+
+                <!-- Admin links -->
+                <p:separator rendered="#{dashboardBean.admin}"/>
+                <p:menuitem value="Users"
+                            url="#{request.contextPath}/admin/users.xhtml"
+                            icon="pi pi-users"
+                            rendered="#{dashboardBean.admin}"/>
+                <p:menuitem value="Players"
+                            url="#{request.contextPath}/admin/players.xhtml"
+                            icon="pi pi-id-card"
+                            rendered="#{dashboardBean.admin}"/>
+                <p:menuitem value="Badges"
+                            url="#{request.contextPath}/admin/badges.xhtml"
+                            icon="pi pi-star"
+                            rendered="#{dashboardBean.admin}"/>
+                <p:menuitem value="Modules"
+                            url="#{request.contextPath}/admin/modules.xhtml"
+                            icon="pi pi-th-large"
+                            rendered="#{dashboardBean.admin}"/>
+                <p:menuitem value="Teams"
+                            url="#{request.contextPath}/admin/teams.xhtml"
+                            icon="pi pi-sitemap"
+                            rendered="#{dashboardBean.admin}"/>
+                <p:menuitem value="Age Groups"
+                            url="#{request.contextPath}/admin/age-groups.xhtml"
+                            icon="pi pi-calendar"
+                            rendered="#{dashboardBean.admin}"/>
+
+                <!-- Coach-only links -->
+                <p:separator rendered="#{dashboardBean.coach and !dashboardBean.admin}"/>
+                <p:menuitem value="Players"
+                            url="#{request.contextPath}/coach/players.xhtml"
+                            icon="pi pi-id-card"
+                            rendered="#{dashboardBean.coach and !dashboardBean.admin}"/>
+                <p:menuitem value="Approvals"
+                            url="#{request.contextPath}/coach/approvals.xhtml"
+                            icon="pi pi-check-circle"
+                            rendered="#{dashboardBean.coach and !dashboardBean.admin}"/>
+
+                <!-- User links -->
+                <p:separator/>
+                <p:menuitem value="My Profile"
+                            url="#{request.contextPath}/player/profile.xhtml"
+                            icon="pi pi-user"
+                            rendered="#{dashboardBean.player or dashboardBean.parent}"/>
+                <p:menuitem value="Logout"
+                            icon="pi pi-sign-out"
+                            onclick="document.getElementById('logoutForm:logoutBtn').click(); return false;"/>
+            </p:menu>
+        </h:form>
+    </nav>
+</h:body>
+</html>

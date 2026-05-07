@@ -1,0 +1,124 @@
+We will develop a Spring Boot Application with Java Server Faces (PrimeFaces) frontend.
+App will use H2 Database for data and files.
+Use User table for username-password authentication.
+Use the following Roles. Create JPA entities and DB tables.
+Use sample-data.xlsx file sample data and reference/lookup tables (Badges, Skills, Age Groups, Levels, Modules, etc).
+Create relevant JSF pages.
+The app could be used by multiple centre as SaaS project, and they will not see each others data.
+Read all workspace and create project.
+
+Java Version: 17
+Spring Boot version: 4.0.4
+Joinfaces version: 6.0.4
+
+ROLES
+    centre-admin (Manages users, group (team), modules, challenges, skills, overall centre oversight, user, player and group (team) management)
+    coach (verifies evidence, approves challenges, supports players)
+    parent (views players' challenges, tracks progress)
+    player (views challenges, submits evidence, tracks progress)
+
+ENTITIES (TABLES)
+    
+    centre (id, name, location, description)
+
+    user (id, first-name, last-name, username (email), password, image, date-of-birth, description)
+    role (id, name)
+    user-role (id, user-id, role-id, centre-id)
+    
+    badge (id, badge, sub-badge-id, centre-id, description, image)
+    sub-badge (id, name, image, point)
+    skill (id, name)
+    sub-badge-skill (id, sub-badge-id, skill-id)
+    
+    age-group (id, name, description)
+    level (id, name, description, level-threshold-point)
+
+    module (id, name, module-detail-id)
+    module-detail (id, name, week-no(incremental), session-focus-description, sub-badge-id, session-plan-link, session-slide-link)
+
+    player (id, centre-id, user-id, parent-id, age-group-id, module-id, team-id)
+    player-badge-detail (id, player-id, sub-badge-id, earned-date)
+    player-level-detail (id, player-id, level-id)
+    legacy-point (id, badge-id, player-id, legacy-point)
+
+    team (id, centre-id, team-name, description)
+    team-player-detail (id, team-id, player-id)
+
+    leaderboard (player-id, module-list, badge-list)
+
+    player -> module -> badges/sub-badges (chanllenges)
+
+
+WORKFLOWS
+    Login
+    Add/Remove/Update/Delete Player/Module/User/Badge/Team/Group
+
+PAGES
+    Login page
+    Admin page
+    Badge page CRUD
+    User page CRUD
+    Player page (User profile list, displaying name, image, overall badge progress, module progress (sub-badges or challenges) and completed modules)
+    Module page CRUD
+    Age Group page CRUD
+    Leaderboard page (centre base filter)
+    Team Page CRUD
+
+    Player (readonly)
+
+REQUIREMENTS
+    Progressive Web App (PWA)
+    Automatically calculate progress and badges
+    UX/UI design for accessibility
+    Admin dashboard
+    Student/Parent portal
+    Automation logic
+    Database setup
+
+NICE TO HAVE
+    Logging
+    Subscribe centre
+    Parent - Player relationship
+
+
+QUESTIONS TO CENTRE
+    Do we need to create a logic behind assigment of badges? YES
+
+    Can a player belong to multiple teams?
+    Does Groups mean age-group or team?
+    How player-module relationship will be?
+
+REQUIREMENTS
+    Users can complete multiple modules over time, but only one module at a time
+    Challenge equals to Sub-Badge
+    Challenges award XP points to the user profile
+    A challenge may span multiple weeks
+    Each challenge maps to 2-3 skills
+    Main badges (e.g. teamwork, personal development) are persistent across modules and games
+    Challenges contribute XP to main badges, regardless of game
+    Existing legacy points must be supported and retained
+    Each user (Players) has a profile showing modules, challenges, XP, skills, and badges
+    Group = Team (terms are synonymous)
+    Users (Players) are mapped to one group (team)
+    Groups (teams) are divided by age ranges, with overlap allowed
+    Users must not be placed in groups with significant age gaps (e.g. 10-year-old with 16-year-old)
+    Modules can be game-specific (Minecraft, Rocket League, Fortnite)
+    Badge progression is not tied to a specific game
+    Center Admins should be able to create/update/delete modules and challenges(badges/sub-badges) in the app
+    Users progress through Bronze → Silver → Gold → Platinum → Diamond
+    The scale for levels currently:
+            0 - 30 points: Bronze
+            31 - 70 points: Silver
+            71 - 120: Gold
+            120 +: Platinum
+    XP comes from completing challenges (badges/sub-badges) within modules
+    Users (Players) should be able to submit evidence (e.g. screenshots), evidence is reviewed and approved by a coach or centre admin
+    Dashboard looks the same across all groups
+    Players can see current module, challenges, XP, badges
+    Players cannot start new module before finishing existing one
+    Web applicatin must be responsive and can run on mobile phones, tablets and desktop devices properly.
+    Accessibility must be activeted for all pages.
+    
+
+
+

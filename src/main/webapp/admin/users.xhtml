@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<ui:composition template="/WEB-INF/templates/layout.xhtml">
+    <ui:param name="title" value="Users - Admin"/>
+    <ui:define name="content">
+        <div class="page-container">
+            <div class="page-header">
+                <h1>User Management</h1>
+                <p:commandButton value="Add User" icon="pi pi-plus"
+                                 onclick="PF('addUserDlg').show()"
+                                 styleClass="btn btn-primary"
+                                 type="button"
+                                 aria-label="Add new user"/>
+            </div>
+
+            <h:form id="usersTableForm">
+            <p:messages showDetail="true" closable="true"/>
+
+            <p:dataTable value="#{userBean.users}" var="u"
+                         reflow="true"
+                         paginator="true" rows="15"
+                         paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                         rowsPerPageTemplate="10,15,25"
+                         styleClass="data-table"
+                         emptyMessage="No users found."
+                         aria-label="Users table">
+                <p:column headerText="Name" sortBy="#{u.firstName}">
+                    <h:outputText value="#{u.firstName} #{u.lastName}"/>
+                </p:column>
+                <p:column headerText="Email / Username" sortBy="#{u.username}">
+                    <h:outputText value="#{u.username}"/>
+                </p:column>
+                <p:column headerText="Status">
+                    <h:outputText value="#{u.enabled ? 'Active' : 'Disabled'}"
+                                  styleClass="#{u.enabled ? 'badge badge-success' : 'badge badge-danger'}"/>
+                </p:column>
+                <p:column headerText="Actions" styleClass="actions-col">
+                    <p:commandButton icon="pi pi-pencil" title="Edit User"
+                                     action="#{userBean.prepareEdit(u)}"
+                                     oncomplete="PF('editUserDlg').show()"
+                                     update="@form :editUserForm" ajax="true"
+                                     styleClass="btn btn-sm btn-secondary"
+                                     aria-label="Edit #{u.firstName}"/>
+                    <p:commandButton icon="pi pi-trash" title="Delete User"
+                                     action="#{userBean.deleteUser()}"
+                                     update="@form" ajax="true"
+                                     styleClass="btn btn-sm btn-danger"
+                                     aria-label="Delete #{u.firstName}">
+                        <p:confirm header="Confirm Delete"
+                                   message="Are you sure you want to delete #{u.firstName} #{u.lastName}?"
+                                   icon="pi pi-exclamation-triangle"/>
+                    </p:commandButton>
+                </p:column>
+            </p:dataTable>
+
+            </h:form>
+
+            <!-- Add User Dialog -->
+            <p:dialog header="Add New User" widgetVar="addUserDlg" modal="true"
+                      closable="true" resizable="false" styleClass="dialog-form"
+                      aria-label="Add User Dialog">
+                <h:form id="addUserForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="newFirstName">First Name <span aria-hidden="true">*</span></label>
+                            <p:inputText id="newFirstName" value="#{userBean.newUser.firstName}"
+                                         required="true" styleClass="form-control"
+                                         aria-required="true"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="newLastName">Last Name <span aria-hidden="true">*</span></label>
+                            <p:inputText id="newLastName" value="#{userBean.newUser.lastName}"
+                                         required="true" styleClass="form-control"
+                                         aria-required="true"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="newEmail">Email <span aria-hidden="true">*</span></label>
+                            <p:inputText id="newEmail" value="#{userBean.newUser.username}"
+                                         required="true" styleClass="form-control"
+                                         aria-required="true"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">Password <span aria-hidden="true">*</span></label>
+                            <p:password id="newPassword" value="#{userBean.newUser.password}"
+                                        required="true" feedback="true"
+                                        styleClass="form-control"
+                                        aria-required="true"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="newRole">Role</label>
+                            <p:selectOneMenu id="newRole" value="#{userBean.selectedRoleName}"
+                                             styleClass="form-control">
+                                <f:selectItem itemLabel="Select Role" itemValue=""/>
+                                <f:selectItems value="#{userBean.roleNames}" var="r"
+                                               itemLabel="#{r}" itemValue="#{r}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="form-group">
+                            <label for="newCentre">Centre</label>
+                            <p:selectOneMenu id="newCentre" value="#{userBean.selectedCentreId}"
+                                             styleClass="form-control">
+                                <f:selectItem itemLabel="Select Centre" itemValue=""/>
+                                <f:selectItems value="#{userBean.centres}" var="c"
+                                               itemLabel="#{c.name}" itemValue="#{c.id}"/>
+                            </p:selectOneMenu>
+                        </div>
+                    </div>
+                    <!-- Hidden button that does the actual save — triggered by the confirm dialog -->
+                    <p:commandButton id="doSaveUserBtn"
+                                     action="#{userBean.saveUser()}"
+                                     ajax="true"
+                                     update="@form :usersTableForm"
+                                     oncomplete="if(!args.validationFailed){ PF('addUserConfirm').hide(); PF('addUserDlg').hide(); }"
+                                     style="display:none"/>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Save" icon="pi pi-check"
+                                         styleClass="btn btn-primary"
+                                         onclick="PF('addUserConfirm').show(); return false;"/>
+                        <p:commandButton value="Cancel" onclick="PF('addUserDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+
+            <!-- Confirm dialog outside the add user dialog to avoid nested modal z-index issues -->
+            <p:confirmDialog id="addUserConfirm" widgetVar="addUserConfirm"
+                             header="Confirm Add User"
+                             message="Are you sure you want to create this user?"
+                             icon="pi pi-exclamation-triangle" modal="true"
+                             appendTo="@(body)">
+                <p:commandButton value="Yes, Create"
+                                 type="button"
+                                 onclick="PF('addUserConfirm').hide(); document.getElementById('addUserForm:doSaveUserBtn').click();"
+                                 styleClass="btn btn-primary"
+                                 icon="pi pi-check"/>
+                <p:commandButton value="Cancel"
+                                 onclick="PF('addUserConfirm').hide()"
+                                 type="button"
+                                 styleClass="btn btn-secondary"
+                                 icon="pi pi-times"/>
+            </p:confirmDialog>
+
+            <!-- Edit User Dialog -->
+            <p:dialog header="Edit User" widgetVar="editUserDlg" modal="true"
+                      closable="true" resizable="false" styleClass="dialog-form"
+                      aria-label="Edit User Dialog">
+                <h:form id="editUserForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="editFirstName">First Name</label>
+                            <p:inputText id="editFirstName" value="#{userBean.selectedUser.firstName}"
+                                         styleClass="form-control"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="editLastName">Last Name</label>
+                            <p:inputText id="editLastName" value="#{userBean.selectedUser.lastName}"
+                                         styleClass="form-control"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEnabled">Active</label>
+                            <p:selectBooleanCheckbox id="editEnabled"
+                                                     value="#{userBean.selectedUser.enabled}"/>
+                        </div>
+                    </div>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Update" action="#{userBean.updateUser()}"
+                                         ajax="true" update="@form"
+                                         styleClass="btn btn-primary" icon="pi pi-check"
+                                         oncomplete="if(!args.validationFailed) PF('editUserDlg').hide()"/>
+                        <p:commandButton value="Cancel" onclick="PF('editUserDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade">
+                <p:commandButton value="Confirm" type="button"
+                                 styleClass="btn btn-danger" icon="pi pi-check"/>
+                <p:commandButton value="Cancel" type="button"
+                                 onclick="PF('confirmDialogWidget').hide()"
+                                 styleClass="btn btn-secondary"/>
+            </p:confirmDialog>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

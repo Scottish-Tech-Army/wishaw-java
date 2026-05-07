@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<ui:composition template="/WEB-INF/templates/layout.xhtml">
+    <ui:param name="title" value="Modules - Admin"/>
+    <ui:define name="content">
+        <div class="page-container">
+            <div class="page-header">
+                <h1>Module Management</h1>
+                <p:commandButton value="Add Module" icon="pi pi-plus"
+                                 onclick="PF('addModuleDlg').show()"
+                                 type="button" styleClass="btn btn-primary"/>
+            </div>
+
+            <h:form id="modulesTableForm">
+            <p:messages showDetail="true" closable="true"/>
+
+            <p:dataTable value="#{moduleBean.modules}" var="m"
+                         reflow="true"
+                         paginator="true" rows="10"
+                         styleClass="data-table" emptyMessage="No modules found."
+                         aria-label="Modules table">
+                <p:column headerText="Module Name" sortBy="#{m.name}">
+                    <h:outputText value="#{m.name}"/>
+                </p:column>
+                <p:column headerText="Game">
+                    <span class="game-badge">#{m.gameType}</span>
+                </p:column>
+                <p:column headerText="Centre">
+                    <h:outputText value="#{m.centre != null ? m.centre.name : 'Global'}"/>
+                </p:column>
+                <p:column headerText="Sessions">
+                    <h:outputText value="#{m.moduleDetails.size()} weeks"/>
+                </p:column>
+                <p:column headerText="Actions" styleClass="actions-col">
+                    <p:commandButton icon="pi pi-list" title="View Sessions"
+                                     action="#{moduleBean.selectModule(m)}"
+                                     oncomplete="PF('viewModuleDlg').show()"
+                                     update="@form :viewModuleForm" ajax="true"
+                                     styleClass="btn btn-sm btn-info"/>
+                    <p:commandButton icon="pi pi-pencil" title="Edit"
+                                     action="#{moduleBean.selectModule(m)}"
+                                     oncomplete="PF('editModuleDlg').show()"
+                                     update="@form :editModuleForm" ajax="true"
+                                     styleClass="btn btn-sm btn-secondary"/>
+                    <p:commandButton icon="pi pi-trash" title="Delete"
+                                     action="#{moduleBean.deleteModule()}"
+                                     update="@form" ajax="true"
+                                     styleClass="btn btn-sm btn-danger">
+                        <p:confirm header="Confirm" message="Delete module #{m.name}?"
+                                   icon="pi pi-exclamation-triangle"/>
+                    </p:commandButton>
+                </p:column>
+            </p:dataTable>
+
+            </h:form>
+
+            <!-- Add Module Dialog -->
+            <p:dialog header="Add Module" widgetVar="addModuleDlg" modal="true" closable="true"
+                      resizable="false" styleClass="dialog-form">
+                <h:form id="addModuleForm">
+                    <div class="form-group">
+                        <label for="modName">Module Name <span aria-hidden="true">*</span></label>
+                        <p:inputText id="modName" value="#{moduleBean.newModule.name}"
+                                     required="true" styleClass="form-control"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="modGame">Game Type</label>
+                        <p:selectOneMenu id="modGame" value="#{moduleBean.newModule.gameType}"
+                                         styleClass="form-control">
+                            <f:selectItem itemLabel="Select Game" itemValue=""/>
+                            <f:selectItem itemLabel="Minecraft" itemValue="Minecraft"/>
+                            <f:selectItem itemLabel="Rocket League" itemValue="Rocket League"/>
+                            <f:selectItem itemLabel="Fortnite" itemValue="Fortnite"/>
+                            <f:selectItem itemLabel="Other" itemValue="Other"/>
+                        </p:selectOneMenu>
+                    </div>
+                    <div class="form-group">
+                        <label for="modCentre">Centre</label>
+                        <p:selectOneMenu id="modCentre" value="#{moduleBean.newModule.centre}"
+                                         styleClass="form-control" converter="#{entityConverter}">
+                            <f:selectItem itemLabel="Global" itemValue=""/>
+                            <f:selectItems value="#{moduleBean.centres}" var="c"
+                                           itemLabel="#{c.name}" itemValue="#{c}"/>
+                        </p:selectOneMenu>
+                    </div>
+                    <div class="form-group">
+                        <label for="modDesc">Description</label>
+                        <p:inputTextarea id="modDesc" value="#{moduleBean.newModule.description}"
+                                         rows="3" styleClass="form-control"/>
+                    </div>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Save" action="#{moduleBean.saveModule()}"
+                                         ajax="true" update="@form"
+                                         styleClass="btn btn-primary" icon="pi pi-check"
+                                         oncomplete="if(!args.validationFailed) PF('addModuleDlg').hide()"/>
+                        <p:commandButton value="Cancel" onclick="PF('addModuleDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+
+            <!-- View/Edit Sessions Dialog -->
+            <p:dialog header="Module Sessions" widgetVar="viewModuleDlg" modal="true" closable="true"
+                      resizable="false" width="750" styleClass="dialog-form">
+                <h:form id="viewModuleForm">
+                    <h:panelGroup rendered="#{moduleBean.selectedModule != null}" layout="block">
+                        <h2>#{moduleBean.selectedModule.name}</h2>
+                        <p>Game: <strong>#{moduleBean.selectedModule.gameType}</strong></p>
+
+                        <p:dataTable value="#{moduleBean.selectedModule.moduleDetails}" var="md"
+                                     styleClass="data-table-sm" emptyMessage="No sessions yet.">
+                            <p:column headerText="Week">
+                                <h:outputText value="#{md.weekNo}"/>
+                            </p:column>
+                            <p:column headerText="Session Name">
+                                <h:outputText value="#{md.name}"/>
+                            </p:column>
+                            <p:column headerText="Focus">
+                                <h:outputText value="#{md.sessionFocusDescription}"/>
+                            </p:column>
+                            <p:column headerText="Challenge">
+                                <h:outputText value="#{md.subBadge != null ? md.subBadge.name : '-'}"/>
+                            </p:column>
+                            <p:column headerText="Actions" styleClass="actions-col">
+                                <p:commandButton icon="pi pi-trash" title="Remove"
+                                                 action="#{moduleBean.removeModuleDetail(md)}"
+                                                 update="viewModuleForm" ajax="true"
+                                                 styleClass="btn btn-sm btn-danger"/>
+                            </p:column>
+                        </p:dataTable>
+
+                        <h3>Add Session</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="mdWeek">Week No</label>
+                                <p:inputNumber id="mdWeek" value="#{moduleBean.newModuleDetail.weekNo}"
+                                               min="1" styleClass="form-control"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="mdName">Session Name <span aria-hidden="true">*</span></label>
+                                <p:inputText id="mdName" value="#{moduleBean.newModuleDetail.name}"
+                                             required="true" styleClass="form-control"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="mdFocus">Session Focus</label>
+                                <p:inputTextarea id="mdFocus"
+                                                 value="#{moduleBean.newModuleDetail.sessionFocusDescription}"
+                                                 rows="2" styleClass="form-control"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="mdSubBadge">Challenge</label>
+                                <p:selectOneMenu id="mdSubBadge"
+                                                 value="#{moduleBean.newModuleDetail.subBadge}"
+                                                 styleClass="form-control" converter="#{entityConverter}">
+                                    <f:selectItem itemLabel="No Challenge" itemValue=""/>
+                                    <f:selectItems value="#{moduleBean.subBadges}" var="sb"
+                                                   itemLabel="#{sb.name} (#{sb.point} XP)"
+                                                   itemValue="#{sb}"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="form-group">
+                                <label for="mdPlan">Plan Link</label>
+                                <p:inputText id="mdPlan" value="#{moduleBean.newModuleDetail.sessionPlanLink}"
+                                             styleClass="form-control"/>
+                            </div>
+                        </div>
+                        <div class="dialog-actions">
+                            <p:commandButton value="Add Session" action="#{moduleBean.addModuleDetail()}"
+                                             ajax="true" update="viewModuleForm"
+                                             styleClass="btn btn-primary" icon="pi pi-plus"/>
+                        </div>
+                    </h:panelGroup>
+                </h:form>
+            </p:dialog>
+
+            <!-- Edit Module Dialog -->
+            <p:dialog header="Edit Module" widgetVar="editModuleDlg" modal="true"
+                      closable="true" resizable="false" styleClass="dialog-form">
+                <h:form id="editModuleForm">
+                    <h:panelGroup rendered="#{moduleBean.selectedModule != null}" layout="block">
+                        <div class="form-group">
+                            <label for="editModName">Module Name</label>
+                            <p:inputText id="editModName" value="#{moduleBean.selectedModule.name}"
+                                         required="true" styleClass="form-control"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="editModGame">Game Type</label>
+                            <p:selectOneMenu id="editModGame" value="#{moduleBean.selectedModule.gameType}"
+                                             styleClass="form-control">
+                                <f:selectItem itemLabel="Select Game" itemValue=""/>
+                                <f:selectItem itemLabel="Minecraft" itemValue="Minecraft"/>
+                                <f:selectItem itemLabel="Rocket League" itemValue="Rocket League"/>
+                                <f:selectItem itemLabel="Fortnite" itemValue="Fortnite"/>
+                                <f:selectItem itemLabel="Other" itemValue="Other"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="form-group">
+                            <label for="editModCentre">Centre</label>
+                            <p:selectOneMenu id="editModCentre" value="#{moduleBean.selectedModule.centre}"
+                                             styleClass="form-control" converter="#{entityConverter}">
+                                <f:selectItem itemLabel="Global" itemValue=""/>
+                                <f:selectItems value="#{moduleBean.centres}" var="c"
+                                               itemLabel="#{c.name}" itemValue="#{c}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="form-group">
+                            <label for="editModDesc">Description</label>
+                            <p:inputTextarea id="editModDesc" value="#{moduleBean.selectedModule.description}"
+                                             rows="3" styleClass="form-control"/>
+                        </div>
+                        <div class="dialog-actions">
+                            <p:commandButton value="Update" action="#{moduleBean.updateModule()}"
+                                             ajax="true" update="@form :modulesTableForm"
+                                             styleClass="btn btn-primary" icon="pi pi-check"
+                                             oncomplete="if(!args.validationFailed) PF('editModuleDlg').hide()"/>
+                            <p:commandButton value="Cancel" onclick="PF('editModuleDlg').hide()"
+                                             type="button" styleClass="btn btn-secondary"/>
+                        </div>
+                    </h:panelGroup>
+                </h:form>
+            </p:dialog>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade">
+                <p:commandButton value="Confirm" type="button" styleClass="btn btn-danger"/>
+                <p:commandButton value="Cancel" type="button"
+                                 onclick="PF('confirmDialogWidget').hide()"
+                                 styleClass="btn btn-secondary"/>
+            </p:confirmDialog>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

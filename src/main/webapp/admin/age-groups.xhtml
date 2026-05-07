@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<ui:composition template="/WEB-INF/templates/layout.xhtml">
+    <ui:param name="title" value="Age Groups - Admin"/>
+    <ui:define name="content">
+        <div class="page-container">
+            <div class="page-header">
+                <h1>Age Group Management</h1>
+                <p:commandButton value="Add Age Group" icon="pi pi-plus"
+                                 onclick="PF('addAgeGroupDlg').show()"
+                                 type="button" styleClass="btn btn-primary"/>
+            </div>
+
+            <h:form id="ageGroupsTableForm">
+
+            <p:messages showDetail="true" closable="true"/>
+
+            <p:dataTable value="#{ageGroupBean.ageGroups}" var="ag"
+                         reflow="true"
+                         styleClass="data-table" emptyMessage="No age groups found."
+                         aria-label="Age Groups table">
+                <p:column headerText="Name" sortBy="#{ag.name}">
+                    <h:outputText value="#{ag.name}"/>
+                </p:column>
+                <p:column headerText="Age Range">
+                    <h:outputText value="#{ag.minAge} - #{ag.maxAge}"/>
+                </p:column>
+                <p:column headerText="Description">
+                    <h:outputText value="#{ag.description}"/>
+                </p:column>
+                <p:column headerText="Actions" styleClass="actions-col">
+                    <p:commandButton icon="pi pi-pencil" title="Edit"
+                                     action="#{ageGroupBean.prepareEdit(ag)}"
+                                     oncomplete="PF('editAgeGroupDlg').show()"
+                                     update="@form :editAgeGroupForm" ajax="true"
+                                     styleClass="btn btn-sm btn-secondary"/>
+                    <p:commandButton icon="pi pi-trash" title="Delete"
+                                     action="#{ageGroupBean.deleteAgeGroup()}"
+                                     update="@form" ajax="true"
+                                     styleClass="btn btn-sm btn-danger">
+                        <p:confirm header="Confirm" message="Delete age group #{ag.name}?"
+                                   icon="pi pi-exclamation-triangle"/>
+                    </p:commandButton>
+                </p:column>
+            </p:dataTable>
+
+            </h:form>
+
+            <!-- Add Age Group Dialog -->
+            <p:dialog header="Add Age Group" widgetVar="addAgeGroupDlg" modal="true" closable="true"
+                      resizable="false" styleClass="dialog-form">
+                <h:form id="addAgeGroupForm">
+                    <div class="form-group">
+                        <label for="agName">Name <span aria-hidden="true">*</span></label>
+                        <p:inputText id="agName" value="#{ageGroupBean.newAgeGroup.name}"
+                                     required="true" styleClass="form-control"/>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="agMin">Min Age</label>
+                            <p:inputNumber id="agMin" value="#{ageGroupBean.newAgeGroup.minAge}"
+                                           min="0" max="99" styleClass="form-control"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="agMax">Max Age</label>
+                            <p:inputNumber id="agMax" value="#{ageGroupBean.newAgeGroup.maxAge}"
+                                           min="0" max="99" styleClass="form-control"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="agDesc">Description</label>
+                        <p:inputTextarea id="agDesc" value="#{ageGroupBean.newAgeGroup.description}"
+                                         rows="2" styleClass="form-control"/>
+                    </div>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Save" action="#{ageGroupBean.saveAgeGroup()}"
+                                         ajax="true" update="@form"
+                                         styleClass="btn btn-primary" icon="pi pi-check"
+                                         oncomplete="if(!args.validationFailed) PF('addAgeGroupDlg').hide()"/>
+                        <p:commandButton value="Cancel" onclick="PF('addAgeGroupDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+
+            <!-- Edit Age Group Dialog -->
+            <p:dialog header="Edit Age Group" widgetVar="editAgeGroupDlg" modal="true" closable="true"
+                      resizable="false" styleClass="dialog-form">
+                <h:form id="editAgeGroupForm">
+                    <h:panelGroup rendered="#{ageGroupBean.selectedAgeGroup != null}" layout="block">
+                        <div class="form-group">
+                            <label for="editAgName">Name</label>
+                            <p:inputText id="editAgName" value="#{ageGroupBean.selectedAgeGroup.name}"
+                                         styleClass="form-control"/>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="editAgMin">Min Age</label>
+                                <p:inputNumber id="editAgMin" value="#{ageGroupBean.selectedAgeGroup.minAge}"
+                                               styleClass="form-control"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="editAgMax">Max Age</label>
+                                <p:inputNumber id="editAgMax" value="#{ageGroupBean.selectedAgeGroup.maxAge}"
+                                               styleClass="form-control"/>
+                            </div>
+                        </div>
+                    </h:panelGroup>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Update" action="#{ageGroupBean.updateAgeGroup()}"
+                                         ajax="true" update="@form"
+                                         styleClass="btn btn-primary" icon="pi pi-check"
+                                         oncomplete="if(!args.validationFailed) PF('editAgeGroupDlg').hide()"/>
+                        <p:commandButton value="Cancel" onclick="PF('editAgeGroupDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade">
+                <p:commandButton value="Confirm" type="button" styleClass="btn btn-danger"/>
+                <p:commandButton value="Cancel" type="button"
+                                 onclick="PF('confirmDialogWidget').hide()"
+                                 styleClass="btn btn-secondary"/>
+            </p:confirmDialog>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

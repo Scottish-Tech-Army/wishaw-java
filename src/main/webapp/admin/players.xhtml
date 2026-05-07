@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<ui:composition template="/WEB-INF/templates/layout.xhtml">
+    <ui:param name="title" value="Players - Admin"/>
+    <ui:define name="content">
+        <div class="page-container">
+            <div class="page-header">
+                <h1>Player Management</h1>
+                <p:commandButton value="Add Player" icon="pi pi-plus"
+                                 onclick="if(PF('addPlayerDlg')) PF('addPlayerDlg').show()"
+                                 type="button" styleClass="btn btn-primary"
+                                 aria-label="Add new player"/>
+            </div>
+
+            <h:form id="playersTableForm">
+            <p:messages showDetail="true" closable="true"/>
+
+            <p:dataTable value="#{playerBean.players}" var="pl"
+                         paginator="true" rows="15"
+                         paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown}"
+                         rowsPerPageTemplate="10,15,25"
+                         styleClass="data-table"
+                         emptyMessage="No players found."
+                         reflow="true"
+                         aria-label="Players table">
+                <p:column headerText="Name" sortBy="#{pl.user.firstName}">
+                    <h:outputText value="#{pl.user.firstName} #{pl.user.lastName}"/>
+                </p:column>
+                <p:column headerText="Team" sortBy="#{pl.team.teamName}">
+                    <h:outputText value="#{pl.team != null ? pl.team.teamName : 'No Team'}"/>
+                </p:column>
+                <p:column headerText="Age Group" sortBy="#{pl.ageGroup.name}">
+                    <h:outputText value="#{pl.ageGroup != null ? pl.ageGroup.name : '-'}"/>
+                </p:column>
+                <p:column headerText="Current Module">
+                    <h:outputText value="#{pl.currentModule != null ? pl.currentModule.name : 'None'}"/>
+                </p:column>
+                <p:column headerText="Total XP" sortBy="#{pl.totalXp}">
+                    <span class="xp-badge">&#11088; #{pl.totalXp} XP</span>
+                </p:column>
+                <p:column headerText="Actions" styleClass="actions-col">
+                    <p:commandButton icon="pi pi-eye" title="View Player"
+                                     action="#{playerBean.selectPlayer(pl)}"
+                                     update="viewPlayerForm" ajax="true"
+                                     oncomplete="if(PF('viewPlayerDlg')) PF('viewPlayerDlg').show()"
+                                     styleClass="btn btn-sm btn-info"
+                                     aria-label="View #{pl.user.firstName}"/>
+                    <p:commandButton icon="pi pi-pencil" title="Edit Player"
+                                     action="#{playerBean.selectPlayer(pl)}"
+                                     oncomplete="if(PF('editPlayerDlg')) PF('editPlayerDlg').show()"
+                                     update="editPlayerForm" ajax="true"
+                                     styleClass="btn btn-sm btn-secondary"
+                                     aria-label="Edit #{pl.user.firstName}"/>
+                    <p:commandButton icon="pi pi-trash" title="Remove Player"
+                                     action="#{playerBean.deletePlayer(pl)}"
+                                     update="@form" ajax="true"
+                                     styleClass="btn btn-sm btn-danger"
+                                     aria-label="Delete #{pl.user.firstName}">
+                        <p:confirm header="Confirm Delete"
+                                   message="Remove player #{pl.user.firstName} #{pl.user.lastName}?"
+                                   icon="pi pi-exclamation-triangle"/>
+                    </p:commandButton>
+                </p:column>
+            </p:dataTable>
+
+            </h:form>
+
+            <!-- Add Player Dialog -->
+            <p:dialog header="Add New Player" widgetVar="addPlayerDlg" modal="true"
+                      closable="true" resizable="true" styleClass="dialog-form"
+                      style="max-height: 70vh; overflow-y: auto;">
+                <h:form id="addPlayerForm">
+                    <p:messages showDetail="true" closable="true"/>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="playerUser">User <span aria-hidden="true">*</span></label>
+                            <p:selectOneMenu id="playerUser" value="#{playerBean.newPlayer.user}"
+                                             required="true" styleClass="form-control"
+                                             converter="#{entityConverter}">
+                                <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.User"/>
+                                <f:selectItem itemLabel="Select User" itemValue="#{null}" noSelectionOption="true"/>
+                                <f:selectItems value="#{playerBean.users}" var="u"
+                                               itemLabel="#{u.firstName} #{u.lastName} (#{u.username})"
+                                               itemValue="#{u}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="form-group">
+                            <label for="playerCentre">Centre <span aria-hidden="true">*</span></label>
+                            <p:selectOneMenu id="playerCentre" value="#{playerBean.newPlayer.centre}"
+                                             required="true" styleClass="form-control"
+                                             converter="#{entityConverter}">
+                                <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.Centre"/>
+                                <f:selectItem itemLabel="Select Centre" itemValue="#{null}" noSelectionOption="true"/>
+                                <f:selectItems value="#{playerBean.centres}" var="c"
+                                               itemLabel="#{c.name}" itemValue="#{c}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="form-group">
+                            <label for="playerAgeGroup">Age Group</label>
+                            <p:selectOneMenu id="playerAgeGroup" value="#{playerBean.newPlayer.ageGroup}"
+                                             styleClass="form-control" converter="#{entityConverter}">
+                                <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.AgeGroup"/>
+                                <f:selectItem itemLabel="Select Age Group" itemValue=""/>
+                                <f:selectItems value="#{playerBean.ageGroups}" var="ag"
+                                               itemLabel="#{ag.name} (#{ag.minAge}-#{ag.maxAge})"
+                                               itemValue="#{ag}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="form-group">
+                            <label for="playerTeam">Team</label>
+                            <p:selectOneMenu id="playerTeam" value="#{playerBean.newPlayer.team}"
+                                             styleClass="form-control" converter="#{entityConverter}">
+                                <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.Team"/>
+                                <f:selectItem itemLabel="No Team" itemValue=""/>
+                                <f:selectItems value="#{playerBean.teams}" var="t"
+                                               itemLabel="#{t.teamName}" itemValue="#{t}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="form-group">
+                            <label for="playerModule">Current Module</label>
+                            <p:selectOneMenu id="playerModule" value="#{playerBean.newPlayer.currentModule}"
+                                             styleClass="form-control" converter="#{entityConverter}">
+                                <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.Module"/>
+                                <f:selectItem itemLabel="No Module" itemValue=""/>
+                                <f:selectItems value="#{playerBean.modules}" var="m"
+                                               itemLabel="#{m.name}" itemValue="#{m}"/>
+                            </p:selectOneMenu>
+                        </div>
+                    </div>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Add Player" action="#{playerBean.savePlayer()}"
+                                         ajax="true" update="@form playersTableForm"
+                                         styleClass="btn btn-primary" icon="pi pi-check"
+                                         oncomplete="if(!args.validationFailed &amp;&amp; PF('addPlayerDlg')) PF('addPlayerDlg').hide()"/>
+                        <p:commandButton value="Cancel" onclick="if(PF('addPlayerDlg')) PF('addPlayerDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+
+            <!-- Edit Player Dialog -->
+            <p:dialog header="Edit Player" widgetVar="editPlayerDlg" modal="true"
+                      closable="true" resizable="false" styleClass="dialog-form"
+                      aria-label="Edit Player Dialog" style="max-height: 70vh; overflow-y: auto;">
+                <h:form id="editPlayerForm">
+                    <p:messages showDetail="true" closable="true"/>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="editFirstName">First Name</label>
+                            <p:inputText id="editFirstName" value="#{playerBean.selectedPlayer.user.firstName}"
+                                         styleClass="form-control" readonly="true"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="editLastName">Last Name</label>
+                            <p:inputText id="editLastName" value="#{playerBean.selectedPlayer.user.lastName}"
+                                         styleClass="form-control" readonly="true"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEnabled">Active</label>
+                            <p:selectBooleanCheckbox id="editEnabled"
+                                                     value="#{playerBean.selectedPlayer.user.enabled}"
+                                                     disabled="true"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="editPlayerCentre">Centre <span aria-hidden="true">*</span></label>
+                            <p:selectOneMenu id="editPlayerCentre" value="#{playerBean.selectedPlayer.centre}"
+                                             required="true" styleClass="form-control"
+                                             converter="#{entityConverter}">
+                                <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.Centre"/>
+                                <f:selectItem itemLabel="Select Centre" itemValue=""/>
+                                <f:selectItems value="#{playerBean.centres}" var="c"
+                                               itemLabel="#{c.name}" itemValue="#{c}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="form-group">
+                            <label for="editPlayerAgeGroup">Age Group</label>
+                            <p:selectOneMenu id="editPlayerAgeGroup" value="#{playerBean.selectedPlayer.ageGroup}"
+                                             styleClass="form-control" converter="#{entityConverter}">
+                                <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.AgeGroup"/>
+                                <f:selectItem itemLabel="Select Age Group" itemValue=""/>
+                                <f:selectItems value="#{playerBean.ageGroups}" var="ag"
+                                               itemLabel="#{ag.name} (#{ag.minAge}-#{ag.maxAge})"
+                                               itemValue="#{ag}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="form-group">
+                            <label for="editPlayerTeam">Team</label>
+                            <p:selectOneMenu id="editPlayerTeam" value="#{playerBean.selectedPlayer.team}"
+                                             styleClass="form-control" converter="#{entityConverter}">
+                                <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.Team"/>
+                                <f:selectItem itemLabel="No Team" itemValue=""/>
+                                <f:selectItems value="#{playerBean.teams}" var="t"
+                                               itemLabel="#{t.teamName}" itemValue="#{t}"/>
+                            </p:selectOneMenu>
+                        </div>
+                        <div class="form-group">
+                            <label for="editPlayerModule">Current Module</label>
+                            <p:selectOneMenu id="editPlayerModule" value="#{playerBean.selectedPlayer.currentModule}"
+                                             styleClass="form-control" converter="#{entityConverter}">
+                                <f:attribute name="entityClass" value="org.scottishtecharmy.wishaw.entity.Module"/>
+                                <f:selectItem itemLabel="No Module" itemValue=""/>
+                                <f:selectItems value="#{playerBean.modules}" var="m"
+                                               itemLabel="#{m.name}" itemValue="#{m}"/>
+                            </p:selectOneMenu>
+                        </div>
+                    </div>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Update" action="#{playerBean.updatePlayer()}"
+                                         ajax="true" update="@form playersTableForm"
+                                         styleClass="btn btn-primary" icon="pi pi-check"
+                                         oncomplete="if(!args.validationFailed) PF('editPlayerDlg').hide()"/>
+                        <p:commandButton value="Cancel" onclick="if(PF('editPlayerDlg')) PF('editPlayerDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+
+            <!-- View Player Dialog -->
+            <p:dialog header="Player Profile" widgetVar="viewPlayerDlg" modal="true"
+                      closable="true" resizable="false" responsive="true" width="700" styleClass="dialog-form view-player-dialog">
+                <h:form id="viewPlayerForm">
+                    <h:panelGroup rendered="#{playerBean.selectedPlayer != null}" layout="block">
+                        <div class="player-profile-dialog">
+                            <div class="profile-info">
+                                <div class="profile-dialog-header">
+                                    <div class="profile-avatar">&#127918;</div>
+                                    <div class="profile-dialog-name">
+                                        <h2>#{playerBean.selectedPlayer.user.firstName} #{playerBean.selectedPlayer.user.lastName}</h2>
+                                        <span class="badge #{playerBean.selectedPlayer.user.enabled ? 'badge-success' : 'badge-danger'}">
+                                            #{playerBean.selectedPlayer.user.enabled ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </div>
+                                    <div class="total-xp-display">
+                                        <span class="xp-value">#{playerBean.selectedPlayer.totalXp}</span>
+                                        <span class="xp-label">XP</span>
+                                    </div>
+                                </div>
+                                <div class="profile-detail-grid">
+                                    <div class="profile-detail-card">
+                                        <span class="profile-detail-icon">&#127960;</span>
+                                        <span class="profile-detail-label">Centre</span>
+                                        <span class="profile-detail-value">#{playerBean.selectedPlayer.centre != null ? playerBean.selectedPlayer.centre.name : 'None'}</span>
+                                    </div>
+                                    <div class="profile-detail-card">
+                                        <span class="profile-detail-icon">&#128101;</span>
+                                        <span class="profile-detail-label">Team</span>
+                                        <span class="profile-detail-value">#{playerBean.selectedPlayer.team != null ? playerBean.selectedPlayer.team.teamName : 'No Team'}</span>
+                                    </div>
+                                    <div class="profile-detail-card">
+                                        <span class="profile-detail-icon">&#128218;</span>
+                                        <span class="profile-detail-label">Module</span>
+                                        <span class="profile-detail-value">#{playerBean.selectedPlayer.currentModule != null ? playerBean.selectedPlayer.currentModule.name : 'None'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3>Badge Progress</h3>
+                            <p:dataTable value="#{playerBean.selectedPlayerLevels}" var="lv"
+                                         emptyMessage="No badge data yet." styleClass="data-table-sm"
+                                         reflow="true">
+                                <p:column headerText="Badge">
+                                    <h:outputText value="#{lv.badge.name}"/>
+                                </p:column>
+                                <p:column headerText="XP">
+                                    <h:outputText value="#{lv.badgeXp}"/>
+                                </p:column>
+                                <p:column headerText="Level">
+                                    <span class="level-badge">#{lv.level.name}</span>
+                                </p:column>
+                            </p:dataTable>
+
+                            <h3>Pending Approvals</h3>
+                            <p:dataTable value="#{playerBean.pendingApprovals}" var="pd"
+                                         emptyMessage="No pending approvals." styleClass="data-table-sm"
+                                         reflow="true">
+                                <p:column headerText="Challenge">
+                                    <h:outputText value="#{pd.subBadge.name}"/>
+                                </p:column>
+                                <p:column headerText="Badge">
+                                    <h:outputText value="#{pd.badge.name}"/>
+                                </p:column>
+                                <p:column headerText="Actions" styleClass="actions-col">
+                                    <p:inputText value="#{playerBean.coachNotes}" placeholder="Notes..."
+                                                 styleClass="form-control-sm"/>
+                                    <p:commandButton value="Approve" icon="pi pi-check"
+                                                     action="#{playerBean.approveChallenge(pd)}"
+                                                     update="viewPlayerForm" ajax="true"
+                                                     styleClass="btn btn-sm btn-success"
+                                                     aria-label="Approve #{pd.subBadge.name}"/>
+                                    <p:commandButton value="Reject" icon="pi pi-times"
+                                                     action="#{playerBean.rejectChallenge(pd)}"
+                                                     update="viewPlayerForm" ajax="true"
+                                                     styleClass="btn btn-sm btn-danger"
+                                                     aria-label="Reject #{pd.subBadge.name}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </div>
+                    </h:panelGroup>
+                </h:form>
+            </p:dialog>
+
+            <p:confirmDialog global="true" showEffect="fade" hideEffect="fade">
+                <p:commandButton value="Confirm" type="button" styleClass="btn btn-danger ui-confirmdialog-yes" icon="pi pi-check"/>
+                <p:commandButton value="Cancel" type="button" styleClass="btn btn-secondary ui-confirmdialog-no" icon="pi pi-times"/>
+            </p:confirmDialog>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

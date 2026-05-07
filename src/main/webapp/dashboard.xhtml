@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<ui:composition template="/WEB-INF/templates/layout.xhtml">
+    <ui:param name="title" value="Dashboard - Wishaw YMCA Esports"/>
+    <ui:define name="content">
+        <div class="page-container">
+            <div class="page-header">
+                <h1>Welcome, #{dashboardBean.currentUser.firstName}!</h1>
+                <p class="subtitle">Wishaw YMCA Esports Digital Badging Portal</p>
+            </div>
+
+            <!-- Admin Dashboard -->
+            <h:panelGroup rendered="#{dashboardBean.admin}" layout="block">
+                <div class="dashboard-grid">
+                    <a href="#{request.contextPath}/admin/players.xhtml" class="dashboard-card" aria-label="Manage Players">
+                        <span class="card-icon" aria-hidden="true">&#128100;</span>
+                        <h2>Players</h2>
+                        <p>Manage player profiles and progress</p>
+                    </a>
+                    <a href="#{request.contextPath}/admin/users.xhtml" class="dashboard-card" aria-label="Manage Users">
+                        <span class="card-icon" aria-hidden="true">&#128101;</span>
+                        <h2>Users</h2>
+                        <p>Manage user accounts and roles</p>
+                    </a>
+                    <a href="#{request.contextPath}/admin/badges.xhtml" class="dashboard-card" aria-label="Manage Badges">
+                        <span class="card-icon" aria-hidden="true">&#127941;</span>
+                        <h2>Badges &amp; Challenges</h2>
+                        <p>Create and manage badges and challenges</p>
+                    </a>
+                    <a href="#{request.contextPath}/admin/modules.xhtml" class="dashboard-card" aria-label="Manage Modules">
+                        <span class="card-icon" aria-hidden="true">&#128218;</span>
+                        <h2>Modules</h2>
+                        <p>Manage learning modules and sessions</p>
+                    </a>
+                    <a href="#{request.contextPath}/admin/teams.xhtml" class="dashboard-card" aria-label="Manage Teams">
+                        <span class="card-icon" aria-hidden="true">&#129309;</span>
+                        <h2>Teams</h2>
+                        <p>Manage groups and team assignments</p>
+                    </a>
+                    <a href="#{request.contextPath}/leaderboard.xhtml" class="dashboard-card" aria-label="View Leaderboard">
+                        <span class="card-icon" aria-hidden="true">&#127942;</span>
+                        <h2>Leaderboard</h2>
+                        <p>View player rankings by centre</p>
+                    </a>
+                </div>
+            </h:panelGroup>
+
+            <!-- Coach Dashboard -->
+            <h:panelGroup rendered="#{dashboardBean.coach and !dashboardBean.admin}" layout="block">
+                <div class="dashboard-grid">
+                    <a href="#{request.contextPath}/coach/players.xhtml" class="dashboard-card" aria-label="View Players">
+                        <span class="card-icon" aria-hidden="true">&#128100;</span>
+                        <h2>Players</h2>
+                        <p>View players and award sub-badges</p>
+                    </a>
+                    <a href="#{request.contextPath}/coach/approvals.xhtml" class="dashboard-card" aria-label="Pending Approvals">
+                        <span class="card-icon" aria-hidden="true">&#9989;</span>
+                        <h2>Pending Approvals</h2>
+                        <p>Review and approve player evidence</p>
+                    </a>
+                    <a href="#{request.contextPath}/leaderboard.xhtml" class="dashboard-card" aria-label="View Leaderboard">
+                        <span class="card-icon" aria-hidden="true">&#127942;</span>
+                        <h2>Leaderboard</h2>
+                        <p>Centre rankings</p>
+                    </a>
+                </div>
+            </h:panelGroup>
+
+            <!-- Player / Parent Dashboard -->
+            <h:panelGroup rendered="#{dashboardBean.player or dashboardBean.parent}" layout="block">
+                <div class="dashboard-grid">
+                    <a href="#{request.contextPath}/player/profile.xhtml" class="dashboard-card" aria-label="My Profile">
+                        <span class="card-icon" aria-hidden="true">&#128100;</span>
+                        <h2>My Profile</h2>
+                        <p>View XP, badges, and progress</p>
+                    </a>
+                    <a href="#{request.contextPath}/leaderboard.xhtml" class="dashboard-card" aria-label="Leaderboard">
+                        <span class="card-icon" aria-hidden="true">&#127942;</span>
+                        <h2>Leaderboard</h2>
+                        <p>See how you rank against other players</p>
+                    </a>
+                </div>
+            </h:panelGroup>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>

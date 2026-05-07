@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+<ui:composition template="/WEB-INF/templates/layout.xhtml">
+    <ui:param name="title" value="Badges - Admin"/>
+    <ui:define name="content">
+        <div class="page-container">
+            <div class="page-header">
+                <h1>Badge &amp; Challenge Management</h1>
+            </div>
+
+            <h:form id="badgesTableForm">
+
+            <p:messages showDetail="true" closable="true"/>
+
+            <p:tabView aria-label="Badge management tabs">
+                <!-- Badges Tab -->
+                <p:tab title="Main Badges" aria-label="Main Badges">
+                    <div class="tab-actions">
+                        <p:commandButton value="Add Badge" icon="pi pi-plus"
+                                         onclick="PF('addBadgeDlg').show()"
+                                         type="button" styleClass="btn btn-primary"/>
+                    </div>
+                    <p:dataTable value="#{badgeBean.badges}" var="b"
+                                 reflow="true"
+                                 styleClass="data-table" emptyMessage="No badges found."
+                                 aria-label="Badges table">
+                        <p:column headerText="Badge Name" sortBy="#{b.name}">
+                            <span class="badge-name">&#127941; #{b.name}</span>
+                        </p:column>
+                        <p:column headerText="Centre">
+                            <h:outputText value="#{b.centre != null ? b.centre.name : 'Global'}"/>
+                        </p:column>
+                        <p:column headerText="Challenges">
+                            <h:outputText value="#{b.subBadges.size()}"/>
+                        </p:column>
+                        <p:column headerText="Actions" styleClass="actions-col">
+                            <p:commandButton icon="pi pi-pencil" title="Edit"
+                                             action="#{badgeBean.prepareEditBadge(b)}"
+                                             update="editBadgeForm" ajax="true"
+                                             oncomplete="PF('editBadgeDlg').show()"
+                                             styleClass="btn btn-sm btn-secondary"/>
+                            <p:commandButton icon="pi pi-trash" title="Delete"
+                                             action="#{badgeBean.prepareDeleteBadge(b)}"
+                                             update="deleteBadgeConfirmForm" ajax="true"
+                                             oncomplete="PF('deleteBadgeConfirm').show()"
+                                             styleClass="btn btn-sm btn-danger"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:tab>
+
+                <!-- Challenges / Sub-badges Tab -->
+                <p:tab title="Challenges (Sub-Badges)" aria-label="Challenges">
+                    <div class="tab-actions">
+                        <p:commandButton value="Add Challenge" icon="pi pi-plus"
+                                         onclick="PF('addSubBadgeDlg').show()"
+                                         type="button" styleClass="btn btn-primary"/>
+                        <span style="margin-left:1rem">
+                            <label for="badgeFilter">Filter by Badge: </label>
+                            <p:selectOneMenu id="badgeFilter" value="#{badgeBean.filterBadgeId}"
+                                             styleClass="form-control" style="display:inline-block;width:auto">
+                                <p:ajax update="challengesTable"/>
+                                <f:selectItem itemLabel="All Badges" itemValue=""/>
+                                <f:selectItems value="#{badgeBean.badges}" var="fb"
+                                               itemLabel="#{fb.name}" itemValue="#{fb.id}"/>
+                            </p:selectOneMenu>
+                        </span>
+                    </div>
+                    <p:dataTable id="challengesTable" value="#{badgeBean.filteredSubBadges}" var="sb"
+                                 styleClass="data-table" emptyMessage="No challenges found."
+                                 aria-label="Challenges table">
+                        <p:column headerText="Badge" sortBy="#{badgeBean.getParentBadgeName(sb)}">
+                            <span class="badge-name">&#127941; #{badgeBean.getParentBadgeName(sb)}</span>
+                        </p:column>
+                        <p:column headerText="Name" sortBy="#{sb.name}">
+                            <h:outputText value="#{sb.name}"/>
+                        </p:column>
+                        <p:column headerText="XP Points" sortBy="#{sb.point}">
+                            <span class="xp-badge">&#11088; #{sb.point}</span>
+                        </p:column>
+                        <p:column headerText="Skills">
+                            <h:outputText value="#{sb.skills.size()} skills"/>
+                        </p:column>
+                        <p:column headerText="Actions" styleClass="actions-col">
+                            <p:commandButton icon="pi pi-pencil" title="Edit"
+                                             action="#{badgeBean.prepareEditSubBadge(sb)}"
+                                             update="editSubBadgeForm" ajax="true"
+                                             oncomplete="PF('editSubBadgeDlg').show()"
+                                             styleClass="btn btn-sm btn-secondary"/>
+                            <p:commandButton icon="pi pi-trash" title="Delete"
+                                             action="#{badgeBean.prepareDeleteSubBadge(sb)}"
+                                             update="deleteSubBadgeConfirmForm" ajax="true"
+                                             oncomplete="PF('deleteSubBadgeConfirm').show()"
+                                             styleClass="btn btn-sm btn-danger"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:tab>
+
+                <!-- Skills Tab -->
+                <p:tab title="Skills" aria-label="Skills">
+                    <div class="tab-actions">
+                        <p:commandButton value="Add Skill" icon="pi pi-plus"
+                                         onclick="PF('addSkillDlg').show()"
+                                         type="button" styleClass="btn btn-primary"/>
+                    </div>
+                    <p:dataTable value="#{badgeBean.skills}" var="sk"
+                                 styleClass="data-table" emptyMessage="No skills found."
+                                 aria-label="Skills table">
+                        <p:column headerText="Skill Name" sortBy="#{sk.name}">
+                            <h:outputText value="#{sk.name}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:tab>
+            </p:tabView>
+
+            </h:form>
+
+            <!-- Add Badge Dialog -->
+            <p:dialog header="Add Badge" widgetVar="addBadgeDlg" modal="true" closable="true"
+                      resizable="false" styleClass="dialog-form">
+                <h:form id="addBadgeForm">
+                    <div class="form-group">
+                        <label for="badgeName">Badge Name <span aria-hidden="true">*</span></label>
+                        <p:inputText id="badgeName" value="#{badgeBean.newBadge.name}"
+                                     required="true" styleClass="form-control"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="badgeCentre">Centre</label>
+                        <p:selectOneMenu id="badgeCentre" value="#{badgeBean.newBadgeCentreId}"
+                                         styleClass="form-control">
+                            <f:selectItem itemLabel="Global (All Centres)" itemValue=""/>
+                            <f:selectItems value="#{badgeBean.centres}" var="c"
+                                           itemLabel="#{c.name}" itemValue="#{c.id}"/>
+                        </p:selectOneMenu>
+                    </div>
+                    <div class="form-group">
+                        <label for="badgeDesc">Description</label>
+                        <p:inputTextarea id="badgeDesc" value="#{badgeBean.newBadge.description}"
+                                         rows="3" styleClass="form-control"/>
+                    </div>
+                    <!-- Hidden button triggered by the confirm dialog -->
+                    <p:commandButton id="doSaveBadgeBtn"
+                                     action="#{badgeBean.saveBadge()}"
+                                     ajax="true"
+                                     update="@form :badgesTableForm"
+                                     oncomplete="if(!args.validationFailed){ PF('addBadgeConfirm').hide(); PF('addBadgeDlg').hide(); }"
+                                     style="display:none"/>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Save" icon="pi pi-check"
+                                         styleClass="btn btn-primary"
+                                         onclick="PF('addBadgeConfirm').show(); return false;"/>
+                        <p:commandButton value="Cancel" onclick="PF('addBadgeDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+
+            <!-- Add Badge confirm dialog - outside add dialog to avoid nested modal issues -->
+            <p:confirmDialog id="addBadgeConfirm" widgetVar="addBadgeConfirm"
+                             header="Confirm Add Badge"
+                             message="Are you sure you want to create this badge?"
+                             icon="pi pi-exclamation-triangle" modal="true"
+                             appendTo="@(body)">
+                <p:commandButton value="Yes, Create" type="button" icon="pi pi-check"
+                                 styleClass="btn btn-primary"
+                                 onclick="PF('addBadgeConfirm').hide(); document.getElementById('addBadgeForm:doSaveBadgeBtn').click();"/>
+                <p:commandButton value="Cancel" type="button" icon="pi pi-times"
+                                 styleClass="btn btn-secondary"
+                                 onclick="PF('addBadgeConfirm').hide()"/>
+            </p:confirmDialog>
+
+            <!-- Add Sub-Badge Dialog -->
+            <p:dialog header="Add Challenge" widgetVar="addSubBadgeDlg" modal="true" closable="true"
+                      resizable="false" styleClass="dialog-form">
+                <h:form id="addSubBadgeForm">
+                    <div class="form-group">
+                        <label for="sbName">Challenge Name <span aria-hidden="true">*</span></label>
+                        <p:inputText id="sbName" value="#{badgeBean.newSubBadge.name}"
+                                     required="true" styleClass="form-control"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="sbPoints">XP Points <span aria-hidden="true">*</span></label>
+                        <p:inputNumber id="sbPoints" value="#{badgeBean.newSubBadge.point}"
+                                       required="true" styleClass="form-control" min="1"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="sbDesc">Description</label>
+                        <p:inputTextarea id="sbDesc" value="#{badgeBean.newSubBadge.description}"
+                                         rows="3" styleClass="form-control"/>
+                    </div>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Save" action="#{badgeBean.saveSubBadge()}"
+                                         ajax="true" update="@form"
+                                         styleClass="btn btn-primary" icon="pi pi-check"
+                                         oncomplete="if(!args.validationFailed) PF('addSubBadgeDlg').hide()"/>
+                        <p:commandButton value="Cancel" onclick="PF('addSubBadgeDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+
+            <!-- Edit Sub-Badge Dialog -->
+            <p:dialog header="Edit Challenge" widgetVar="editSubBadgeDlg" modal="true" closable="true"
+                      resizable="false" styleClass="dialog-form">
+                <h:form id="editSubBadgeForm">
+                    <h:panelGroup rendered="#{badgeBean.selectedSubBadge != null}" layout="block">
+                        <div class="form-group">
+                            <label for="editSbName">Challenge Name</label>
+                            <p:inputText id="editSbName" value="#{badgeBean.selectedSubBadge.name}"
+                                         required="true" styleClass="form-control"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="editSbPoints">XP Points</label>
+                            <p:inputNumber id="editSbPoints" value="#{badgeBean.selectedSubBadge.point}"
+                                           required="true" styleClass="form-control" min="1"/>
+                        </div>
+                        <div class="form-group">
+                            <label for="editSbDesc">Description</label>
+                            <p:inputTextarea id="editSbDesc" value="#{badgeBean.selectedSubBadge.description}"
+                                             rows="3" styleClass="form-control"/>
+                        </div>
+                        <div class="dialog-actions">
+                            <p:commandButton value="Update" action="#{badgeBean.updateSubBadge()}"
+                                             ajax="true" update="@form :badgesTableForm"
+                                             styleClass="btn btn-primary" icon="pi pi-check"
+                                             oncomplete="if(!args.validationFailed) PF('editSubBadgeDlg').hide()"/>
+                            <p:commandButton value="Cancel" onclick="PF('editSubBadgeDlg').hide()"
+                                             type="button" styleClass="btn btn-secondary"/>
+                        </div>
+                    </h:panelGroup>
+                </h:form>
+            </p:dialog>
+
+            <!-- Add Skill Dialog -->
+            <p:dialog header="Add Skill" widgetVar="addSkillDlg" modal="true" closable="true"
+                      resizable="false" styleClass="dialog-form">
+                <h:form id="addSkillForm">
+                    <div class="form-group">
+                        <label for="skillName">Skill Name <span aria-hidden="true">*</span></label>
+                        <p:inputText id="skillName" value="#{badgeBean.newSkill.name}"
+                                     required="true" styleClass="form-control"/>
+                    </div>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Save" action="#{badgeBean.saveSkill()}"
+                                         ajax="true" update="@form"
+                                         styleClass="btn btn-primary" icon="pi pi-check"
+                                         oncomplete="if(!args.validationFailed) PF('addSkillDlg').hide()"/>
+                        <p:commandButton value="Cancel" onclick="PF('addSkillDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+
+            <!-- Delete Badge confirm dialog -->
+            <h:form id="deleteBadgeConfirmForm">
+                <p:confirmDialog id="deleteBadgeConfirm" widgetVar="deleteBadgeConfirm"
+                                 header="Confirm Delete"
+                                 message="Are you sure you want to delete this badge?"
+                                 icon="pi pi-exclamation-triangle" modal="true"
+                                 appendTo="@(body)">
+                    <p:commandButton value="Yes, Delete"
+                                     action="#{badgeBean.deleteBadge()}"
+                                     ajax="true"
+                                     update=":badgesTableForm"
+                                     oncomplete="PF('deleteBadgeConfirm').hide()"
+                                     styleClass="btn btn-danger"
+                                     icon="pi pi-trash"/>
+                    <p:commandButton value="Cancel" type="button" icon="pi pi-times"
+                                     styleClass="btn btn-secondary"
+                                     onclick="PF('deleteBadgeConfirm').hide()"/>
+                </p:confirmDialog>
+            </h:form>
+
+            <!-- Delete Challenge confirm dialog -->
+            <h:form id="deleteSubBadgeConfirmForm">
+                <p:confirmDialog id="deleteSubBadgeConfirm" widgetVar="deleteSubBadgeConfirm"
+                                 header="Confirm Delete"
+                                 message="Are you sure you want to delete this challenge?"
+                                 icon="pi pi-exclamation-triangle" modal="true"
+                                 appendTo="@(body)">
+                    <p:commandButton value="Yes, Delete"
+                                     action="#{badgeBean.deleteSubBadge()}"
+                                     ajax="true"
+                                     update=":badgesTableForm"
+                                     oncomplete="PF('deleteSubBadgeConfirm').hide()"
+                                     styleClass="btn btn-danger"
+                                     icon="pi pi-trash"/>
+                    <p:commandButton value="Cancel" type="button" icon="pi pi-times"
+                                     styleClass="btn btn-secondary"
+                                     onclick="PF('deleteSubBadgeConfirm').hide()"/>
+                </p:confirmDialog>
+            </h:form>
+
+            <!-- Edit Badge Dialog -->
+            <p:dialog header="Edit Badge" widgetVar="editBadgeDlg" modal="true" closable="true"
+                      resizable="false" styleClass="dialog-form">
+                <h:form id="editBadgeForm">
+                    <div class="form-group">
+                        <label for="editBadgeName">Badge Name <span aria-hidden="true">*</span></label>
+                        <p:inputText id="editBadgeName" value="#{badgeBean.selectedBadge.name}"
+                                     required="true" styleClass="form-control"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="editBadgeCentre">Centre</label>
+                        <p:selectOneMenu id="editBadgeCentre" value="#{badgeBean.editBadgeCentreId}"
+                                         styleClass="form-control">
+                            <f:selectItem itemLabel="Global (All Centres)" itemValue=""/>
+                            <f:selectItems value="#{badgeBean.centres}" var="c"
+                                           itemLabel="#{c.name}" itemValue="#{c.id}"/>
+                        </p:selectOneMenu>
+                    </div>
+                    <div class="form-group">
+                        <label for="editBadgeDesc">Description</label>
+                        <p:inputTextarea id="editBadgeDesc" value="#{badgeBean.selectedBadge.description}"
+                                         rows="3" styleClass="form-control"/>
+                    </div>
+                    <div class="dialog-actions">
+                        <p:commandButton value="Save" action="#{badgeBean.updateBadge()}"
+                                         ajax="true" update="@form :badgesTableForm"
+                                         styleClass="btn btn-primary" icon="pi pi-check"
+                                         oncomplete="if(!args.validationFailed) PF('editBadgeDlg').hide()"/>
+                        <p:commandButton value="Cancel" onclick="PF('editBadgeDlg').hide()"
+                                         type="button" styleClass="btn btn-secondary"/>
+                    </div>
+                </h:form>
+            </p:dialog>
+        </div>
+    </ui:define>
+</ui:composition>
+</html>
