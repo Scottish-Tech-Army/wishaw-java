@@ -1,0 +1,1880 @@
+openapi: 3.0.3
+info:
+  title: Wishaw YMCA Badge API
+  version: 0.0.1
+  description: |
+    OpenAPI contract for the Wishaw YMCA Esports badging backend.
+
+    This API is designed for a separate React frontend and uses session-based authentication.
+    Successful login establishes a JSESSIONID cookie; subsequent calls must include that cookie.
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+tags:
+  - name: Auth
+  - name: Admin Users
+  - name: Centres
+  - name: Groups
+  - name: Modules
+  - name: Enrollments
+  - name: Progress
+  - name: Import
+  - name: Player
+  - name: Parent
+  - name: Leaderboards
+paths:
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Log in and create a backend session
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: superadmin
+              password: admin123
+      responses:
+        '200':
+          description: Login succeeded and a session cookie is returned.
+          headers:
+            Set-Cookie:
+              description: Session cookie carrying the authenticated Spring session.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: End the current backend session
+      operationId: logout
+      security: []
+      responses:
+        '204':
+          description: Session invalidated.
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Get the currently authenticated user
+      operationId: getAuthenticatedUser
+      security:
+        - SessionCookieAuth: []
+      responses:
+        '200':
+          description: Authenticated user summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/users:
+    post:
+      tags:
+        - Admin Users
+      summary: Create a user account
+      operationId: createUser
+      security:
+        - SessionCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSummaryResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    get:
+      tags:
+        - Admin Users
+      summary: List users
+      operationId: listUsers
+      security:
+        - SessionCookieAuth: []
+      responses:
+        '200':
+          description: All users visible to the admin scope.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/users/{id}:
+    get:
+      tags:
+        - Admin Users
+      summary: Get a user by id
+      operationId: getUser
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - Admin Users
+      summary: Update a user account
+      operationId: updateUser
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Updated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSummaryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/users/{id}/status:
+    patch:
+      tags:
+        - Admin Users
+      summary: Activate or deactivate a user
+      operationId: updateUserStatus
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateActiveStatusRequest'
+      responses:
+        '200':
+          description: Updated user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSummaryResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/parents/link-player:
+    post:
+      tags:
+        - Admin Users
+      summary: Link a parent account to a player account
+      operationId: linkParentToPlayer
+      security:
+        - SessionCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkParentRequest'
+      responses:
+        '204':
+          description: Parent link created.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/centres:
+    post:
+      tags:
+        - Centres
+      summary: Create a centre
+      operationId: createCentre
+      security:
+        - SessionCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCentreRequest'
+      responses:
+        '201':
+          description: Centre created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CentreResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    get:
+      tags:
+        - Centres
+      summary: List centres
+      operationId: listCentres
+      security:
+        - SessionCookieAuth: []
+      responses:
+        '200':
+          description: Centre list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CentreResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/centres/{id}:
+    put:
+      tags:
+        - Centres
+      summary: Update a centre
+      operationId: updateCentre
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CentreId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCentreRequest'
+      responses:
+        '200':
+          description: Updated centre.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CentreResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/groups:
+    post:
+      tags:
+        - Groups
+      summary: Create a group
+      operationId: createGroup
+      security:
+        - SessionCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '201':
+          description: Group created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    get:
+      tags:
+        - Groups
+      summary: List groups
+      operationId: listGroups
+      security:
+        - SessionCookieAuth: []
+      responses:
+        '200':
+          description: Group list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GroupResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/groups/{id}:
+    put:
+      tags:
+        - Groups
+      summary: Update a group
+      operationId: updateGroup
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '200':
+          description: Updated group.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/modules:
+    post:
+      tags:
+        - Modules
+      summary: Create a module
+      operationId: createModule
+      security:
+        - SessionCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateModuleRequest'
+      responses:
+        '201':
+          description: Module created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleSummaryResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    get:
+      tags:
+        - Modules
+      summary: List modules
+      operationId: listModules
+      security:
+        - SessionCookieAuth: []
+      responses:
+        '200':
+          description: Module list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModuleSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/modules/{id}:
+    get:
+      tags:
+        - Modules
+      summary: Get module detail
+      operationId: getModule
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModuleId'
+      responses:
+        '200':
+          description: Module with challenges and schedule items.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - Modules
+      summary: Update a module
+      operationId: updateModule
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModuleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateModuleRequest'
+      responses:
+        '200':
+          description: Updated module.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleSummaryResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/modules/{id}/challenges:
+    post:
+      tags:
+        - Modules
+      summary: Add a challenge to a module
+      operationId: createChallenge
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModuleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChallengeRequest'
+      responses:
+        '201':
+          description: Updated module detail including the new challenge.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleDetailResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/challenges/{id}:
+    put:
+      tags:
+        - Modules
+      summary: Update an existing challenge
+      operationId: updateChallenge
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ChallengeId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChallengeRequest'
+      responses:
+        '200':
+          description: Updated module detail containing the challenge.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleDetailResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/modules/{id}/schedule-items:
+    post:
+      tags:
+        - Modules
+      summary: Add a schedule item to a module
+      operationId: createScheduleItem
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ModuleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleItemRequest'
+      responses:
+        '201':
+          description: Updated module detail including the new schedule item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/schedule-items/{id}:
+    put:
+      tags:
+        - Modules
+      summary: Update a schedule item
+      operationId: updateScheduleItem
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ScheduleItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleItemRequest'
+      responses:
+        '200':
+          description: Updated module detail containing the schedule item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/enrollments:
+    post:
+      tags:
+        - Enrollments
+      summary: Enroll a player on a module
+      operationId: createEnrollment
+      security:
+        - SessionCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEnrollmentRequest'
+      responses:
+        '201':
+          description: Enrollment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/enrollments/{id}/status:
+    patch:
+      tags:
+        - Enrollments
+      summary: Update enrollment status
+      operationId: updateEnrollmentStatus
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/EnrollmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEnrollmentStatusRequest'
+      responses:
+        '200':
+          description: Updated enrollment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/progress/legacy-points:
+    post:
+      tags:
+        - Progress
+      summary: Set imported or legacy badge points for a player
+      operationId: setLegacyPoints
+      security:
+        - SessionCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetLegacyPointsRequest'
+      responses:
+        '200':
+          description: Updated badge progress.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadgeProgressResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/progress/award-challenge:
+    post:
+      tags:
+        - Progress
+      summary: Award a challenge to a player and recalculate progress
+      operationId: awardChallenge
+      security:
+        - SessionCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AwardChallengeRequest'
+      responses:
+        '200':
+          description: Updated badge progress.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadgeProgressResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/import/csv/upload:
+    post:
+      tags:
+        - Import
+      summary: Upload a CSV file and create an import preview batch
+      operationId: uploadCsv
+      security:
+        - SessionCookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Parsed batch preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/import/{batchId}/map-players:
+    post:
+      tags:
+        - Import
+      summary: Map imported external player references to known player ids
+      operationId: mapPlayers
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BatchId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportPlayerMappingRequest'
+      responses:
+        '200':
+          description: Updated import preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/import/{batchId}/preview:
+    get:
+      tags:
+        - Import
+      summary: Get the current preview state of an import batch
+      operationId: getImportPreview
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BatchId'
+      responses:
+        '200':
+          description: Import preview.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/import/{batchId}/commit:
+    post:
+      tags:
+        - Import
+      summary: Commit an import batch and create challenge awards
+      operationId: commitImport
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BatchId'
+      responses:
+        '200':
+          description: Import committed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportCommitResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/admin/import/{batchId}/report:
+    get:
+      tags:
+        - Import
+      summary: Get the final import batch report
+      operationId: getImportReport
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BatchId'
+      responses:
+        '200':
+          description: Import report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/players/{playerId}/profile:
+    get:
+      tags:
+        - Player
+      summary: Get a player profile as an admin
+      operationId: getPlayerProfile
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PlayerId'
+      responses:
+        '200':
+          description: Player profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/players/{playerId}/progress:
+    get:
+      tags:
+        - Player
+      summary: Get badge progress for a player as an admin
+      operationId: getPlayerProgress
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PlayerId'
+      responses:
+        '200':
+          description: Badge progress entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BadgeProgressResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/me/profile:
+    get:
+      tags:
+        - Player
+      summary: Get the authenticated player's own profile
+      operationId: getMyProfile
+      security:
+        - SessionCookieAuth: []
+      responses:
+        '200':
+          description: Current player profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/me/progress:
+    get:
+      tags:
+        - Player
+      summary: Get the authenticated player's badge progress
+      operationId: getMyProgress
+      security:
+        - SessionCookieAuth: []
+      responses:
+        '200':
+          description: Current player badge progress.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BadgeProgressResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/parent/players:
+    get:
+      tags:
+        - Parent
+      summary: List players linked to the authenticated parent
+      operationId: getLinkedPlayers
+      security:
+        - SessionCookieAuth: []
+      responses:
+        '200':
+          description: Parent-linked players.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/parent/players/{playerId}/profile:
+    get:
+      tags:
+        - Parent
+      summary: Get a linked player's profile as a parent
+      operationId: getLinkedPlayerProfile
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PlayerId'
+      responses:
+        '200':
+          description: Linked player profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/parent/players/{playerId}/progress:
+    get:
+      tags:
+        - Parent
+      summary: Get a linked player's badge progress as a parent
+      operationId: getLinkedPlayerProgress
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PlayerId'
+      responses:
+        '200':
+          description: Linked player badge progress.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BadgeProgressResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/leaderboards/global:
+    get:
+      tags:
+        - Leaderboards
+      summary: Get the global leaderboard
+      operationId: getGlobalLeaderboard
+      security:
+        - SessionCookieAuth: []
+      responses:
+        '200':
+          description: Global leaderboard.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/leaderboards/centre/{centreId}:
+    get:
+      tags:
+        - Leaderboards
+      summary: Get the leaderboard for one centre
+      operationId: getCentreLeaderboard
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CentreId'
+      responses:
+        '200':
+          description: Centre leaderboard.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/v1/leaderboards/group/{groupId}:
+    get:
+      tags:
+        - Leaderboards
+      summary: Get the leaderboard for one group
+      operationId: getGroupLeaderboard
+      security:
+        - SessionCookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Group leaderboard.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+components:
+  securitySchemes:
+    SessionCookieAuth:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+      description: Session cookie returned by POST /api/v1/auth/login.
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    CentreId:
+      name: centreId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ModuleId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ChallengeId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ScheduleItemId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    EnrollmentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    BatchId:
+      name: batchId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+  responses:
+    BadRequest:
+      description: Request was syntactically valid but semantically invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    ValidationError:
+      description: Bean validation failed for one or more request fields.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    Unauthorized:
+      description: Authentication is missing, invalid, or expired.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    Forbidden:
+      description: Authenticated user does not have the required role.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    Conflict:
+      description: Request conflicts with current state, usually a duplicate resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    ServerError:
+      description: An unexpected backend error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - password
+        - displayName
+        - role
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+        displayName:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        centreId:
+          type: integer
+          format: int64
+          nullable: true
+        groupId:
+          type: integer
+          format: int64
+          nullable: true
+        externalRef:
+          type: string
+          nullable: true
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        centreId:
+          type: integer
+          format: int64
+          nullable: true
+        groupId:
+          type: integer
+          format: int64
+          nullable: true
+        externalRef:
+          type: string
+          nullable: true
+    UpdateActiveStatusRequest:
+      type: object
+      required:
+        - active
+      properties:
+        active:
+          type: boolean
+    LinkParentRequest:
+      type: object
+      required:
+        - parentUserId
+        - playerUserId
+      properties:
+        parentUserId:
+          type: integer
+          format: int64
+        playerUserId:
+          type: integer
+          format: int64
+        relationshipLabel:
+          type: string
+          nullable: true
+    CreateCentreRequest:
+      type: object
+      required:
+        - name
+        - code
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+    CreateGroupRequest:
+      type: object
+      required:
+        - name
+        - centreId
+      properties:
+        name:
+          type: string
+        gameName:
+          type: string
+          nullable: true
+        ageBand:
+          type: string
+          nullable: true
+        centreId:
+          type: integer
+          format: int64
+    CreateModuleRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        gameName:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+    CreateChallengeRequest:
+      type: object
+      required:
+        - name
+        - badgeCategoryId
+        - points
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        badgeCategoryId:
+          type: integer
+          format: int64
+        points:
+          type: integer
+          minimum: 0
+        displayOrder:
+          type: integer
+          default: 0
+    CreateScheduleItemRequest:
+      type: object
+      properties:
+        weekNumber:
+          type: integer
+        sessionFocus:
+          type: string
+          nullable: true
+        linkedChallengeId:
+          type: integer
+          format: int64
+          nullable: true
+        sessionPlanUrl:
+          type: string
+          nullable: true
+        sessionSlidesUrl:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+    CreateEnrollmentRequest:
+      type: object
+      required:
+        - playerId
+        - moduleId
+      properties:
+        playerId:
+          type: integer
+          format: int64
+        moduleId:
+          type: integer
+          format: int64
+        groupId:
+          type: integer
+          format: int64
+          nullable: true
+    UpdateEnrollmentStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/EnrollmentStatus'
+    SetLegacyPointsRequest:
+      type: object
+      required:
+        - playerId
+        - badgeCategoryId
+        - legacyPoints
+      properties:
+        playerId:
+          type: integer
+          format: int64
+        badgeCategoryId:
+          type: integer
+          format: int64
+        legacyPoints:
+          type: integer
+          minimum: 0
+    AwardChallengeRequest:
+      type: object
+      required:
+        - playerId
+        - challengeId
+      properties:
+        playerId:
+          type: integer
+          format: int64
+        challengeId:
+          type: integer
+          format: int64
+        notes:
+          type: string
+          nullable: true
+    ImportPlayerMappingRequest:
+      type: object
+      properties:
+        playerMappings:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+      example:
+        playerMappings:
+          player1: 1
+          player2: 2
+    AuthResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        message:
+          type: string
+    UserSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        displayName:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        active:
+          type: boolean
+        centreId:
+          type: integer
+          format: int64
+          nullable: true
+        centreName:
+          type: string
+          nullable: true
+        groupId:
+          type: integer
+          format: int64
+          nullable: true
+        groupName:
+          type: string
+          nullable: true
+        externalRef:
+          type: string
+          nullable: true
+    CentreResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        code:
+          type: string
+        active:
+          type: boolean
+    GroupResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        gameName:
+          type: string
+          nullable: true
+        ageBand:
+          type: string
+          nullable: true
+        centreId:
+          type: integer
+          format: int64
+        centreName:
+          type: string
+        active:
+          type: boolean
+    ModuleSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        gameName:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        approved:
+          type: boolean
+    ModuleDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        gameName:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        approved:
+          type: boolean
+        challenges:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleChallengeResponse'
+        scheduleItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleScheduleItemResponse'
+    ModuleChallengeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        points:
+          type: integer
+        badgeCategoryId:
+          type: integer
+          format: int64
+        badgeCategoryName:
+          type: string
+        displayOrder:
+          type: integer
+        active:
+          type: boolean
+    ModuleScheduleItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        weekNumber:
+          type: integer
+        sessionFocus:
+          type: string
+          nullable: true
+        linkedChallengeId:
+          type: integer
+          format: int64
+          nullable: true
+        sessionPlanUrl:
+          type: string
+          nullable: true
+        sessionSlidesUrl:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+    EnrollmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        playerId:
+          type: integer
+          format: int64
+        playerName:
+          type: string
+        moduleId:
+          type: integer
+          format: int64
+        moduleName:
+          type: string
+        status:
+          $ref: '#/components/schemas/EnrollmentStatus'
+    BadgeProgressResponse:
+      type: object
+      properties:
+        badgeCategoryId:
+          type: integer
+          format: int64
+        categoryCode:
+          type: string
+        categoryName:
+          type: string
+        legacyPoints:
+          type: integer
+        earnedPoints:
+          type: integer
+        totalPoints:
+          type: integer
+        currentLevel:
+          type: string
+          nullable: true
+    PlayerProfileResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        displayName:
+          type: string
+        centreName:
+          type: string
+          nullable: true
+        groupName:
+          type: string
+          nullable: true
+        badgeProgress:
+          type: array
+          items:
+            $ref: '#/components/schemas/BadgeProgressResponse'
+        overallTotalPoints:
+          type: integer
+    LeaderboardEntryResponse:
+      type: object
+      properties:
+        rank:
+          type: integer
+        playerId:
+          type: integer
+          format: int64
+        displayName:
+          type: string
+        centreName:
+          type: string
+          nullable: true
+        groupName:
+          type: string
+          nullable: true
+        totalPoints:
+          type: integer
+        highestLevel:
+          type: string
+          nullable: true
+    ImportPreviewResponse:
+      type: object
+      properties:
+        batchId:
+          type: integer
+          format: int64
+        fileName:
+          type: string
+        status:
+          $ref: '#/components/schemas/ImportStatus'
+        totalRows:
+          type: integer
+        validRows:
+          type: integer
+        errorRows:
+          type: integer
+        warningRows:
+          type: integer
+        unmappedPlayers:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportRowDetail'
+    ImportRowDetail:
+      type: object
+      properties:
+        rowNumber:
+          type: integer
+        status:
+          $ref: '#/components/schemas/ImportRowStatus'
+        message:
+          type: string
+        rawData:
+          type: string
+    ImportCommitResponse:
+      type: object
+      properties:
+        batchId:
+          type: integer
+          format: int64
+        status:
+          $ref: '#/components/schemas/ImportStatus'
+        totalAwardsCreated:
+          type: integer
+        totalPlayersAffected:
+          type: integer
+        message:
+          type: string
+    ApiErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+    Role:
+      type: string
+      enum:
+        - SUPER_ADMIN
+        - CENTRE_ADMIN
+        - PLAYER
+        - PARENT
+    EnrollmentStatus:
+      type: string
+      enum:
+        - ASSIGNED
+        - IN_PROGRESS
+        - COMPLETED
+        - ARCHIVED
+    ImportStatus:
+      type: string
+      enum:
+        - UPLOADED
+        - PREVIEW_READY
+        - COMMITTED
+        - FAILED
+    ImportRowStatus:
+      type: string
+      enum:
+        - OK
+        - WARNING
+        - ERROR
+        - SKIPPED

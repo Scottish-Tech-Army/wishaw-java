@@ -1,0 +1,41 @@
+username,badgeCategoryCode,legacyPoints,challengePoints,challengeName,sourceReference,notes
+player1,GAME_MASTERY,15,10,Build Battle Basics,legacy-gm-001,Migrated from old WordPress tracker
+player1,TEAMWORK,20,5,Team Communication,legacy-tw-001,Migrated from old WordPress tracker
+player1,ESPORTS_CITIZEN,10,10,Good Sportsmanship,legacy-ec-001,Migrated from old WordPress tracker
+player1,PERSONAL_DEVELOPMENT,5,0,,legacy-pd-001,Legacy points only - no challenge award
+player1,DIGITAL_SKILLS,25,15,Stream Setup,legacy-ds-001,Migrated from old WordPress tracker
+player2,GAME_MASTERY,30,20,Advanced Tactics,legacy-gm-002,Top performer from Season 1
+player2,TEAMWORK,40,15,Squad Leader,legacy-tw-002,Promoted to team captain
+player2,ESPORTS_CITIZEN,35,10,Community Mentor,legacy-ec-002,Mentored 3 new players
+player2,PERSONAL_DEVELOPMENT,20,10,Goal Setting,legacy-pd-002,Completed personal growth plan
+player2,DIGITAL_SKILLS,10,5,Basic PC Setup,legacy-ds-002,Completed hardware basics
+player3,GAME_MASTERY,5,10,Map Knowledge,legacy-gm-003,New player with quick progress
+player3,TEAMWORK,0,5,Callout Practice,legacy-tw-003,Started mid-season
+player3,ESPORTS_CITIZEN,10,0,,legacy-ec-003,Legacy points from community event
+player3,PERSONAL_DEVELOPMENT,0,0,,legacy-pd-003,No prior progress
+player3,DIGITAL_SKILLS,15,10,Streaming Basics,legacy-ds-003,Completed OBS tutorial
+player4,GAME_MASTERY,50,25,Tournament Ready,legacy-gm-004,Season 1 champion
+player4,TEAMWORK,45,20,IGL Training,legacy-tw-004,In-game leader certified
+player4,ESPORTS_CITIZEN,60,15,Fair Play Award,legacy-ec-004,Won sportsmanship award
+player4,PERSONAL_DEVELOPMENT,35,10,Self Review,legacy-pd-004,Completed 3 self-assessments
+player4,DIGITAL_SKILLS,40,20,Full Stream Setup,legacy-ds-004,Runs own Twitch channel
+player5,GAME_MASTERY,10,5,Basic Mechanics,legacy-gm-005,Casual participant
+player5,TEAMWORK,5,5,Team Chat,legacy-tw-005,Improving communication
+player5,ESPORTS_CITIZEN,20,10,Positive Attitude,legacy-ec-005,Consistently positive in chat
+player5,PERSONAL_DEVELOPMENT,10,5,Reflection Exercise,legacy-pd-005,Completed 1 self-assessment
+player5,DIGITAL_SKILLS,0,0,,legacy-ds-005,Not yet started digital skills
+player6,GAME_MASTERY,70,30,Ranked Champion,legacy-gm-006,Reached top 100 in ranked
+player6,TEAMWORK,55,25,Team Captain,legacy-tw-006,Led team to semi-finals
+player6,ESPORTS_CITIZEN,45,20,Ambassador,legacy-ec-006,Represented YMCA at event
+player6,PERSONAL_DEVELOPMENT,25,15,Portfolio Review,legacy-pd-006,Created digital portfolio
+player6,DIGITAL_SKILLS,60,25,Content Creator,legacy-ds-006,Published 5 YouTube videos
+player7,GAME_MASTERY,0,5,First Steps,legacy-gm-007,Brand new player
+player7,TEAMWORK,0,0,,legacy-tw-007,Not yet assessed
+player7,ESPORTS_CITIZEN,5,5,Welcome Buddy,legacy-ec-007,Helped welcome a new player
+player7,PERSONAL_DEVELOPMENT,0,0,,legacy-pd-007,Not yet started
+player7,DIGITAL_SKILLS,0,0,,legacy-ds-007,Not yet started
+player8,GAME_MASTERY,25,15,Strategy Basics,legacy-gm-008,Completed strategy module
+player8,TEAMWORK,30,10,Duo Partner,legacy-tw-008,Consistent duo performer
+player8,ESPORTS_CITIZEN,20,10,Chat Moderator,legacy-ec-008,Helped moderate Discord
+player8,PERSONAL_DEVELOPMENT,15,10,Weekly Journal,legacy-pd-008,Maintained progress journal
+player8,DIGITAL_SKILLS,35,15,Overlay Design,legacy-ds-008,Created custom stream overlay

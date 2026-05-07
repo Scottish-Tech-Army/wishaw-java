@@ -1,0 +1,7 @@
+username,badgeCategoryCode,legacyPoints,challengePoints,challengeName,notes
+player1,GAME_MASTERY,0,10,Normal Row,Valid row with zero legacy points
+player1,TEAMWORK,50,,Legacy Only,Legacy points only - no challenge award
+,GAME_MASTERY,10,10,Missing Username,ERROR: username is required
+player1,,10,10,Missing Category,ERROR: badgeCategoryCode is required
+player1,GAME_MASTERY,100,50,"Quoted, Value",Test quoted fields with comma inside
+player1,ESPORTS_CITIZEN,0,0,,Both points zero - should be valid but no-op
