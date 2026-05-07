@@ -1,0 +1,7 @@
+target/*
+!target/wishaw-java-0.0.1-SNAPSHOT.jar
+
+.git
+.idea
+node_modules
+docs/*.pdf

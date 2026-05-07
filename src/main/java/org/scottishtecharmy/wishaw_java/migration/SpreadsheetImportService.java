@@ -1,0 +1,367 @@
+package org.scottishtecharmy.wishaw_java.migration;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.scottishtecharmy.wishaw_java.dto.ImportDtos;
+import org.scottishtecharmy.wishaw_java.exception.BadRequestException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+@Service
+@Transactional
+public class SpreadsheetImportService {
+
+    private static final Logger log = LoggerFactory.getLogger(SpreadsheetImportService.class);
+    private static final Pattern NON_ALNUM = Pattern.compile("[^A-Z0-9]+");
+    private static final int MAX_IDENTIFIER_LENGTH = 60;
+
+    private final JdbcTemplate jdbcTemplate;
+
+    public SpreadsheetImportService(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    public ImportDtos.SpreadsheetImportResponse importWorkbook(Path sourceWorkbook, boolean dropExisting) {
+        String workbookName = sourceWorkbook.getFileName() == null ? sourceWorkbook.toString() : sourceWorkbook.getFileName().toString();
+        return importWorkbook(sourceWorkbook, workbookName, dropExisting);
+    }
+
+    public ImportDtos.SpreadsheetImportResponse importWorkbook(Path sourceWorkbook, String workbookName, boolean dropExisting) {
+        if (sourceWorkbook == null || !Files.exists(sourceWorkbook)) {
+            throw new BadRequestException("Spreadsheet workbook not found: " + sourceWorkbook);
+        }
+
+        String resolvedWorkbookName = workbookName == null || workbookName.isBlank()
+                ? (sourceWorkbook.getFileName() == null ? sourceWorkbook.toString() : sourceWorkbook.getFileName().toString())
+                : workbookName;
+
+        createMetadataTables();
+        long importRunId = createImportRun(sourceWorkbook, resolvedWorkbookName);
+        List<ImportDtos.SpreadsheetImportSheetDto> importedSheets = new ArrayList<>();
+
+        try (InputStream inputStream = Files.newInputStream(sourceWorkbook)) {
+            Workbook workbook;
+            try {
+                workbook = WorkbookFactory.create(inputStream);
+            } catch (IOException | RuntimeException exception) {
+                throw new BadRequestException("Uploaded file is not a readable spreadsheet workbook");
+            }
+
+            try (Workbook openedWorkbook = workbook) {
+                DataFormatter formatter = new DataFormatter(Locale.ENGLISH);
+                FormulaEvaluator evaluator = openedWorkbook.getCreationHelper().createFormulaEvaluator();
+
+                for (Sheet sheet : openedWorkbook) {
+                    ImportedSheetSummary summary = importSheet(importRunId, sheet, formatter, evaluator, dropExisting);
+                    if (summary != null) {
+                        importedSheets.add(summary.toDto());
+                    }
+                }
+            }
+        } catch (IOException exception) {
+            throw new BadRequestException("Failed to read workbook: " + resolvedWorkbookName);
+        }
+
+        int importedRows = importedSheets.stream().mapToInt(ImportDtos.SpreadsheetImportSheetDto::dataRowCount).sum();
+        log.info("Spreadsheet import complete. importRunId={}, workbook={}, importedSheets={}, importedRows={}",
+                importRunId,
+                resolvedWorkbookName,
+                importedSheets.size(),
+                importedRows);
+
+        return new ImportDtos.SpreadsheetImportResponse(
+                importRunId,
+                resolvedWorkbookName,
+                dropExisting,
+                importedSheets.size(),
+                importedRows,
+                importedSheets,
+                importedSheets.isEmpty() ? "No non-empty sheets were imported" : "Spreadsheet import completed successfully"
+        );
+    }
+
+    private void createMetadataTables() {
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS SPREADSHEET_IMPORT_RUNS (
+                    ID BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+                    WORKBOOK_PATH VARCHAR(1024) NOT NULL,
+                    WORKBOOK_NAME VARCHAR(255) NOT NULL,
+                    IMPORTED_AT TIMESTAMP WITH TIME ZONE NOT NULL
+                )
+                """);
+
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS SPREADSHEET_IMPORT_SHEETS (
+                    IMPORT_RUN_ID BIGINT NOT NULL,
+                    SHEET_NAME VARCHAR(255) NOT NULL,
+                    TABLE_NAME VARCHAR(255) NOT NULL,
+                    HEADER_ROW_NUMBER INT NOT NULL,
+                    DATA_ROW_COUNT INT NOT NULL,
+                    IMPORTED_AT TIMESTAMP WITH TIME ZONE NOT NULL
+                )
+                """);
+
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS SPREADSHEET_IMPORT_HEADERS (
+                    IMPORT_RUN_ID BIGINT NOT NULL,
+                    SHEET_NAME VARCHAR(255) NOT NULL,
+                    TABLE_NAME VARCHAR(255) NOT NULL,
+                    COLUMN_POSITION INT NOT NULL,
+                    ORIGINAL_HEADER VARCHAR(255),
+                    SANITIZED_COLUMN VARCHAR(255) NOT NULL,
+                    IMPORTED_AT TIMESTAMP WITH TIME ZONE NOT NULL
+                )
+                """);
+    }
+
+    private long createImportRun(Path sourceWorkbook, String workbookName) {
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(connection -> {
+            PreparedStatement statement = connection.prepareStatement(
+                    "INSERT INTO SPREADSHEET_IMPORT_RUNS (WORKBOOK_PATH, WORKBOOK_NAME, IMPORTED_AT) VALUES (?, ?, ?)",
+                    Statement.RETURN_GENERATED_KEYS
+            );
+            statement.setString(1, sourceWorkbook.toAbsolutePath().toString());
+            statement.setString(2, workbookName);
+            statement.setObject(3, OffsetDateTime.now());
+            return statement;
+        }, keyHolder);
+
+        Number key = keyHolder.getKey();
+        if (key == null) {
+            throw new IllegalStateException("Failed to create spreadsheet import run metadata");
+        }
+        return key.longValue();
+    }
+
+    private ImportedSheetSummary importSheet(long importRunId,
+                                             Sheet sheet,
+                                             DataFormatter formatter,
+                                             FormulaEvaluator evaluator,
+                                             boolean dropExisting) {
+        Row headerRow = findFirstNonEmptyRow(sheet, formatter, evaluator);
+        if (headerRow == null) {
+            log.info("Skipping empty spreadsheet sheet: {}", sheet.getSheetName());
+            return null;
+        }
+
+        int maxColumns = determineMaxColumns(sheet);
+        if (maxColumns == 0) {
+            log.info("Skipping spreadsheet sheet with no columns: {}", sheet.getSheetName());
+            return null;
+        }
+
+        String tableName = buildTableName(sheet.getSheetName());
+        List<ColumnMapping> columns = buildColumnMappings(headerRow, maxColumns, formatter, evaluator);
+
+        if (dropExisting) {
+            jdbcTemplate.execute("DROP TABLE IF EXISTS " + tableName);
+        }
+        jdbcTemplate.execute(buildCreateTableSql(tableName, columns));
+
+        int dataRowCount = 0;
+        for (int rowIndex = headerRow.getRowNum() + 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            List<String> values = extractValues(row, columns.size(), formatter, evaluator);
+            if (values.stream().allMatch(String::isBlank)) {
+                continue;
+            }
+            insertRow(tableName, importRunId, rowIndex + 1, columns, values);
+            dataRowCount++;
+        }
+
+        OffsetDateTime importedAt = OffsetDateTime.now();
+        jdbcTemplate.update(
+                "INSERT INTO SPREADSHEET_IMPORT_SHEETS (IMPORT_RUN_ID, SHEET_NAME, TABLE_NAME, HEADER_ROW_NUMBER, DATA_ROW_COUNT, IMPORTED_AT) VALUES (?, ?, ?, ?, ?, ?)",
+                importRunId,
+                sheet.getSheetName(),
+                tableName,
+                headerRow.getRowNum() + 1,
+                dataRowCount,
+                importedAt
+        );
+
+        for (int index = 0; index < columns.size(); index++) {
+            ColumnMapping column = columns.get(index);
+            jdbcTemplate.update(
+                    "INSERT INTO SPREADSHEET_IMPORT_HEADERS (IMPORT_RUN_ID, SHEET_NAME, TABLE_NAME, COLUMN_POSITION, ORIGINAL_HEADER, SANITIZED_COLUMN, IMPORTED_AT) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    importRunId,
+                    sheet.getSheetName(),
+                    tableName,
+                    index + 1,
+                    column.originalHeader(),
+                    column.sanitizedColumn(),
+                    importedAt
+            );
+        }
+
+        log.info("Imported sheet '{}' into table {} with {} data rows", sheet.getSheetName(), tableName, dataRowCount);
+        return new ImportedSheetSummary(sheet.getSheetName(), tableName, headerRow.getRowNum() + 1, dataRowCount);
+    }
+
+    private Row findFirstNonEmptyRow(Sheet sheet, DataFormatter formatter, FormulaEvaluator evaluator) {
+        for (int rowIndex = sheet.getFirstRowNum(); rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (!isRowEmpty(row, formatter, evaluator)) {
+                return row;
+            }
+        }
+        return null;
+    }
+
+    private int determineMaxColumns(Sheet sheet) {
+        int maxColumns = 0;
+        for (int rowIndex = sheet.getFirstRowNum(); rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (row == null) {
+                continue;
+            }
+            maxColumns = Math.max(maxColumns, row.getLastCellNum());
+        }
+        return Math.max(maxColumns, 0);
+    }
+
+    private boolean isRowEmpty(Row row, DataFormatter formatter, FormulaEvaluator evaluator) {
+        if (row == null) {
+            return true;
+        }
+        for (int columnIndex = 0; columnIndex < row.getLastCellNum(); columnIndex++) {
+            String value = getCellValue(row.getCell(columnIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), formatter, evaluator);
+            if (!value.isBlank()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private List<ColumnMapping> buildColumnMappings(Row headerRow, int maxColumns, DataFormatter formatter, FormulaEvaluator evaluator) {
+        List<ColumnMapping> columns = new ArrayList<>();
+        Set<String> usedIdentifiers = new HashSet<>();
+        Map<String, Integer> duplicateCounts = new HashMap<>();
+
+        for (int columnIndex = 0; columnIndex < maxColumns; columnIndex++) {
+            String originalHeader = getCellValue(headerRow.getCell(columnIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), formatter, evaluator);
+            String baseIdentifier = sanitizeIdentifier(originalHeader, "COLUMN_" + (columnIndex + 1));
+            int nextCount = duplicateCounts.getOrDefault(baseIdentifier, 0) + 1;
+            duplicateCounts.put(baseIdentifier, nextCount);
+
+            String identifier = baseIdentifier;
+            if (nextCount > 1) {
+                identifier = trimIdentifier(baseIdentifier, MAX_IDENTIFIER_LENGTH - (String.valueOf(nextCount).length() + 1)) + "_" + nextCount;
+            }
+            while (!usedIdentifiers.add(identifier)) {
+                nextCount++;
+                identifier = trimIdentifier(baseIdentifier, MAX_IDENTIFIER_LENGTH - (String.valueOf(nextCount).length() + 1)) + "_" + nextCount;
+            }
+
+            columns.add(new ColumnMapping(originalHeader, identifier));
+        }
+        return columns;
+    }
+
+    private String buildTableName(String sheetName) {
+        return "IMPORT_" + sanitizeIdentifier(sheetName, "SHEET");
+    }
+
+    private String sanitizeIdentifier(String rawValue, String fallback) {
+        String upper = rawValue == null ? "" : rawValue.trim().toUpperCase(Locale.ENGLISH);
+        String sanitized = NON_ALNUM.matcher(upper).replaceAll("_");
+        sanitized = sanitized.replaceAll("_+", "_");
+        sanitized = sanitized.replaceAll("^_+|_+$", "");
+        if (sanitized.isBlank()) {
+            sanitized = fallback;
+        }
+        return trimIdentifier(sanitized, MAX_IDENTIFIER_LENGTH);
+    }
+
+    private String trimIdentifier(String value, int maxLength) {
+        if (value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
+    }
+
+    private String buildCreateTableSql(String tableName, List<ColumnMapping> columns) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("CREATE TABLE ").append(tableName).append(" (")
+                .append("IMPORT_RUN_ID BIGINT NOT NULL, ")
+                .append("SOURCE_ROW_NUMBER INT NOT NULL");
+
+        for (ColumnMapping column : columns) {
+            builder.append(", ").append(column.sanitizedColumn()).append(" CLOB");
+        }
+
+        builder.append(")");
+        return builder.toString();
+    }
+
+    private void insertRow(String tableName, long importRunId, int sourceRowNumber, List<ColumnMapping> columns, List<String> values) {
+        StringBuilder sql = new StringBuilder("INSERT INTO ").append(tableName).append(" (IMPORT_RUN_ID, SOURCE_ROW_NUMBER");
+        for (ColumnMapping column : columns) {
+            sql.append(", ").append(column.sanitizedColumn());
+        }
+        sql.append(") VALUES (?, ?");
+        sql.append(", ?".repeat(columns.size()));
+        sql.append(")");
+
+        List<Object> params = new ArrayList<>();
+        params.add(importRunId);
+        params.add(sourceRowNumber);
+        params.addAll(values);
+        jdbcTemplate.update(sql.toString(), params.toArray());
+    }
+
+    private List<String> extractValues(Row row, int columnCount, DataFormatter formatter, FormulaEvaluator evaluator) {
+        List<String> values = new ArrayList<>(columnCount);
+        for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+            values.add(getCellValue(row == null ? null : row.getCell(columnIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), formatter, evaluator));
+        }
+        return values;
+    }
+
+    private String getCellValue(Cell cell, DataFormatter formatter, FormulaEvaluator evaluator) {
+        if (cell == null) {
+            return "";
+        }
+        if (cell.getCellType() == CellType.BLANK) {
+            return "";
+        }
+        return formatter.formatCellValue(cell, evaluator).trim();
+    }
+
+    private record ColumnMapping(String originalHeader, String sanitizedColumn) {
+    }
+
+    private record ImportedSheetSummary(String sheetName, String tableName, int headerRowNumber, int dataRowCount) {
+        private ImportDtos.SpreadsheetImportSheetDto toDto() {
+            return new ImportDtos.SpreadsheetImportSheetDto(sheetName, tableName, headerRowNumber, dataRowCount);
+        }
+    }
+}

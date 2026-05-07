@@ -1,0 +1,5 @@
+org\scottishtecharmy\wishaw_java\WishawJavaApplicationTests.class
+org\scottishtecharmy\wishaw_java\controller\TournamentControllerIntegrationTest.class
+org\scottishtecharmy\wishaw_java\controller\AuthControllerIntegrationTest.class
+org\scottishtecharmy\wishaw_java\service\BadgeLevelServiceTest.class
+org\scottishtecharmy\wishaw_java\security\JwtServiceTest.class
