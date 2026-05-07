@@ -1,0 +1,29 @@
+package org.scottishtecharmy.wishaw_java.user.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import org.scottishtecharmy.wishaw_java.common.ValidDob;
+
+import java.time.LocalDate;
+
+public record CreateUserRequest(
+        @NotBlank(message = "username is required")
+        @Size(min = 3, max = 50)
+        String username,
+
+        @NotBlank(message = "password is required")
+        @Size(min = 6, max = 100)
+        String password,
+
+        @NotBlank(message = "display name is required")
+        String displayName,
+
+        String role,       // MAIN_ADMIN, CENTRE_ADMIN, USER
+
+        Long centreId,
+
+        @NotNull(message = "date of birth is required")
+        @ValidDob
+        LocalDate dob
+) { }
